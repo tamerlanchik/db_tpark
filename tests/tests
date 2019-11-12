@@ -1,0 +1,6 @@
+1) Create user
+curl -H "Content-Type: application/json" --data @createuser.json http://localhost:5000/user/jack/create
+2) Get User
+curl http://localhost:5000/user/jack/profile
+3) Edit User
+curl -H "Content-Type: application/json" --data @edituser.json http://localhost:5000/user/jack/profile
