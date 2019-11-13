@@ -14,3 +14,5 @@ curl -H "Content-Type: application/json" --data @createthread.json http://localh
 curl http://localhost:5000/forum/test_forum/details
 7) Get Threads for Forum
 curl "http://localhost:5000/forum/test_forum/threads?limit=100&since=2017-01-01&desc=false"
+8) Get users for Forum
+curl "http://localhost:5000/forum/test_forum/users?limit=100&since=A&desc=false"

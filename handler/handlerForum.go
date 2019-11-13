@@ -138,7 +138,30 @@ func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
+	args := mux.Vars(r)
+	forumSlug, ok := args["slug"]
+	if !ok {
+		fmt.Println("No such a param: ", "slug")
+		return
+	}
+	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 8)
+	if err != nil {
+		return
+	}
+	since := r.FormValue("since")
+	desc, err := strconv.ParseBool(r.FormValue("desc"))
+	if err != nil {
+		return
+	}
 
+	users, err := h.repo.GetUsers(forumSlug, limit, since, desc)
+	if err != nil {
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
+		w.WriteHeader(404)
+		return
+	}
+	HttpTools.BodyFromStruct(w, users)
+	w.WriteHeader(200)
 }
 
 func (h *ForumHandler) GetThreadDetails(w http.ResponseWriter, r *http.Request) {

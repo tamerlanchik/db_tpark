@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"db_tpark/structs"
 	"fmt"
 )
@@ -35,4 +36,37 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 
 	_, err := r.DB.Exec(query, user.Email, user.Fullname, user.About, user.Nickname)
 	return err
+}
+
+func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
+	users := make([]structs.User, 0)
+	query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
+--     			(SELECT DISTINCT usernick as "author" FROM Forum WHERE slug=$1 AND usernick>=$2)
+--     			UNION
+				(SELECT DISTINCT author FROM Thread WHERE forum=$1 AND author>=$2)
+				UNION
+				(SELECT DISTINCT author FROM Post WHERE forum=$1 AND author>=$2)
+				) ORDER BY nickname %s LIMIT $3;`
+	if desc {
+		query = fmt.Sprintf(query, "DESC")
+	}else{
+		query = fmt.Sprintf(query, "")
+	}
+
+	var rows *sql.Rows
+	var err error
+	rows, err = r.DB.Query(query, forumSlug, since, limit)
+	if err != nil {
+		return users, err
+	}
+
+	for rows.Next(){
+		user := structs.User{}
+		err := rows.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname)
+		if err != nil {
+			return users, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
 }
