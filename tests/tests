@@ -4,3 +4,6 @@ curl -H "Content-Type: application/json" --data @createuser.json http://localhos
 curl http://localhost:5000/user/jack/profile
 3) Edit User
 curl -H "Content-Type: application/json" --data @edituser.json http://localhost:5000/user/jack/profile
+
+4) Create Forum
+curl -H "Content-Type: application/json" --data @createforum-NoUser.json http://localhost:5000/forum/create

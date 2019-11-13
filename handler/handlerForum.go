@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"2019_2_Next_Level/pkg/HttpTools"
 	"db_tpark/repository"
+	"db_tpark/structs"
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -23,7 +26,29 @@ func (h *ForumHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
-
+	var forum structs.Forum
+	err := HttpTools.StructFromBody(*r, &forum)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = h.repo.CreateForum(forum.Slug, forum.Title, forum.User)
+	if err != nil {
+		e := err.(structs.InternalError)
+		switch e.E{
+		case structs.ErrorNoUser:
+			HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fine user with nick " + forum.User})
+			w.WriteHeader(404)
+			return
+		case structs.ErrorDuplicateKey:
+			forum, err = h.repo.GetForum(forum.Slug)
+			w.WriteHeader(409)
+			HttpTools.BodyFromStruct(w, forum)
+		}
+	}else{
+		w.WriteHeader(201)
+		HttpTools.BodyFromStruct(w, forum)
+	}
 }
 
 func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
