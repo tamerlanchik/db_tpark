@@ -52,7 +52,42 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
-
+	args := mux.Vars(r)
+	forumSlug, ok := args["slug"]
+	if !ok {
+		fmt.Println("No such a param: ", "nick")
+		return
+	}
+	var req structs.Thread
+	err := HttpTools.StructFromBody(*r, &req)
+	if err != nil {
+		fmt.Println("Wrror body in CreateThread")
+		return
+	}
+	req.Forum = forumSlug
+	thread, err := h.repo.CreateThread(req)
+	if err != nil {
+		e := err.(structs.InternalError)
+		switch e.E{
+		case structs.ErrorNoUser:
+			HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fine user with nick " + req.Author})
+			w.WriteHeader(404)
+			return
+		case structs.ErrorNoForum:
+			HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t find forum with slug " + req.Forum})
+			w.WriteHeader(404)
+			return
+		case structs.ErrorDuplicateKey:
+			thread, err := h.repo.GetThread(req.Slug)
+			if err != nil {
+				fmt.Println(err)
+			}
+			w.WriteHeader(409)
+			HttpTools.BodyFromStruct(w, thread)
+		}
+	}
+	w.WriteHeader(201)
+	HttpTools.BodyFromStruct(w, thread)
 }
 
 func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {

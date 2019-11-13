@@ -27,6 +27,10 @@ CREATE TABLE Forum (
     userNick CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL
 );
 
+
+CREATE OR REPLACE FUNCTION slug_thread() RETURNS TEXT LANGUAGE SQL AS
+$$ SELECT array_to_string(array(select substr('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789-_',((random()*(62-1)+1)::integer),1) from generate_series(1,10)),'') $$;
+
 -- DROP TABLE IF EXISTS Thread;
 CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
@@ -34,7 +38,7 @@ CREATE TABLE Thread (
     forum TEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
     id BIGSERIAL PRIMARY KEY,
     message TEXT NOT NULL,
-    slug TEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
+    slug TEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$') DEFAULT slug_thread(),
     title TEXT NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );

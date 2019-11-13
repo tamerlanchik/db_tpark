@@ -3,6 +3,7 @@ package structs
 const (
 	ErrorNoUser = "Nouser"
 	ErrorDuplicateKey = "DuplicateKey"
+	ErrorNoForum = "NoForum"
 )
 
 type Error struct {

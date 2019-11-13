@@ -18,6 +18,18 @@ const (
 )
 
 func main() {
+	//type S struct {
+	//	A string `json:"a,omitempty"`
+	//	B int `json:"b,omitempty"`
+	//}
+	//
+	//w := S{A:""}
+	//
+	//res, _ := json.Marshal(w)
+	//fmt.Println(string(res))
+
+
+
 	mainRouter := mux.NewRouter()
 	InflateRouter(mainRouter)
 

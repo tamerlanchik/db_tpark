@@ -44,3 +44,5 @@ func (r *PostgresRepo) GetForum(slug string) (structs.Forum, error) {
 	forum.Slug = slug
 	return forum, err
 }
+
+
