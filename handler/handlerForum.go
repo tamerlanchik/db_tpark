@@ -155,8 +155,8 @@ func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	users, err := h.repo.GetUsers(forumSlug, limit, since, desc)
-	if err != nil {
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
+	if err != nil || len(users)==0{
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t find forum with slug " + forumSlug})
 		w.WriteHeader(404)
 		return
 	}

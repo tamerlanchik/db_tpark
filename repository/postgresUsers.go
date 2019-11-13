@@ -41,8 +41,8 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
 	users := make([]structs.User, 0)
 	query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
---     			(SELECT DISTINCT usernick as "author" FROM Forum WHERE slug=$1 AND usernick>=$2)
---     			UNION
+     			(SELECT DISTINCT usernick as "author" FROM Forum WHERE slug=$1 AND usernick>=$2)
+     			UNION
 				(SELECT DISTINCT author FROM Thread WHERE forum=$1 AND author>=$2)
 				UNION
 				(SELECT DISTINCT author FROM Post WHERE forum=$1 AND author>=$2)
