@@ -91,6 +91,21 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
+	args := mux.Vars(r)
+	forumSlug, ok := args["slug"]
+	if !ok {
+		fmt.Println("No such a param: ", "nick")
+		return
+	}
+	var forum structs.Forum
+	forum, err := h.repo.GetForum(forumSlug)
+	if err != nil {
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
+		w.WriteHeader(404)
+		return
+	}
+	HttpTools.BodyFromStruct(w, forum)
+	w.WriteHeader(200)
 
 }
 
