@@ -11,4 +11,6 @@ curl -H "Content-Type: application/json" --data @createforum-NoUser.json http://
 curl -H "Content-Type: application/json" --data @createthread.json http://localhost:5000/forum/ewdewd/create
 curl -H "Content-Type: application/json" --data @createthread.json http://localhost:5000/forum/test_forum/create
 6) Get Forum
-curl http://localhost:5000/forum/test_forum/defails
+curl http://localhost:5000/forum/test_forum/details
+7) Get Threads for Forum
+curl "http://localhost:5000/forum/test_forum/threads?limit=100&since=2017-01-01&desc=false"

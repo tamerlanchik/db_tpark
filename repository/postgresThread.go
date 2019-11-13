@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"db_tpark/structs"
 	"fmt"
 	pg "github.com/jackc/pgconn"
@@ -45,4 +46,34 @@ func (r *PostgresRepo) GetThread(slug string) (structs.Thread, error) {
 			thread.Id, thread.Message, thread.Slug, thread.Title, thread.Votes)
 	thread.Created = created.Format(time.RFC3339)
 	return thread, err
+}
+
+func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error) {
+	threads := make([]structs.Thread, 0)
+	query := `SELECT author, created, id, message, slug, title, votes FROM Thread WHERE forum=$1 AND created>=$2 ORDER BY created LIMIT $3`
+	queryDesc := `SELECT author, created, id, message, slug, title, votes FROM Thread WHERE forum=$1 AND created>=$2 ORDER BY created DESC LIMIT $3`
+
+	var rows *sql.Rows
+	var err error
+	if desc {
+		rows, err = r.DB.Query(queryDesc, forumSlug, since, limit)
+	}else{
+		rows, err = r.DB.Query(query, forumSlug, since, limit)
+	}
+	if err != nil {
+		return threads, err
+	}
+
+	for rows.Next(){
+		thread := structs.Thread{}
+		var created time.Time
+		err := rows.Scan(&thread.Author, &created, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+		thread.Created = created.Format(time.RFC3339)
+		if err != nil {
+			return threads, err
+		}
+		threads = append(threads, thread)
+	}
+	return threads, nil
+
 }

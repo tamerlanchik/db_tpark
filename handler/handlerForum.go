@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strconv"
 )
 
 type ForumHandler struct {
@@ -110,7 +111,30 @@ func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
+	args := mux.Vars(r)
+	forumSlug, ok := args["slug"]
+	if !ok {
+		fmt.Println("No such a param: ", "nick")
+		return
+	}
+	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 8)
+	if err != nil {
+		return
+	}
+	since := r.FormValue("since")
+	desc, err := strconv.ParseBool(r.FormValue("desc"))
+	if err != nil {
+		return
+	}
 
+	threads, err := h.repo.GetThreads(forumSlug, limit, since, desc)
+	if err != nil {
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
+		w.WriteHeader(404)
+		return
+	}
+	HttpTools.BodyFromStruct(w, threads)
+	w.WriteHeader(200)
 }
 
 func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
