@@ -35,4 +35,15 @@ func (r *PostgresRepo) Init(user, pass, host, port, dbname string) error {
 	return r.DB.Ping()
 }
 
+func (r *PostgresRepo) ClearAll() error {
+	query := `
+			TRUNCATE TABLE vote CASCADE;
+			TRUNCATE TABLE Post CASCADE;
+			TRUNCATE TABLE Thread CASCADE;
+			TRUNCATE TABLE Forum CASCADE;
+			TRUNCATE TABLE Users CASCADE;
+		`
+	_, err := r.DB.Exec(query)
+	return err
+}
 

@@ -22,3 +22,6 @@ curl "http://localhost:5000/post/1/details
 curl "http://localhost:5000/post/1/details?related=forum,user,thread
 10) Edit Post
 curl -H "Content-Type: application/json" --data @editpost.json http://localhost:5000/post/1/details
+
+11) ClearAll
+curl -X POST http://localhost:5000/service/clear

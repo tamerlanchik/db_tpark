@@ -19,4 +19,6 @@ type Repository interface{
 	GetPost(id int64) (structs.Post, error)
 	GetPostAccount(id int64, fields []string) (structs.PostAccount, error)
 	EditPost(id int64, newPost structs.Post) error
+
+	ClearAll() error
 }

@@ -20,7 +20,7 @@ func(h *ServiceHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ServiceHandler) ClearAll(w http.ResponseWriter, r *http.Request) {
-
+	h.repo.ClearAll()
 }
 
 func (h *ServiceHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
