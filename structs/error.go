@@ -4,6 +4,8 @@ const (
 	ErrorNoUser = "Nouser"
 	ErrorDuplicateKey = "DuplicateKey"
 	ErrorNoForum = "NoForum"
+	ErrorNoThread = "NoThread"
+	ErrorNoParent = "NoParent"
 )
 
 type Error struct {

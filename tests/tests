@@ -27,3 +27,6 @@ curl -H "Content-Type: application/json" --data @editpost.json http://localhost:
 curl -X POST http://localhost:5000/service/clear
 12) Get Statistics
 curl http://localhost:5000/service/status
+
+13) Create Posts
+curl -H "Content-Type: application/json" --data @createpost.json http://localhost:5000/thread/2/create

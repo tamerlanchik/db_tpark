@@ -52,7 +52,7 @@ CREATE TABLE Post (
     id BIGSERIAL PRIMARY KEY,
     isEdited BOOLEAN NOT NULL DEFAULT false,
     message TEXT NOT NULL DEFAULT '',
-    parent BIGINT NOT NULL DEFAULT 0,
+    parent BIGINT REFERENCES Post (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     thread INTEGER REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
@@ -84,6 +84,14 @@ CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum
     BEGIN
         IF TG_OP='INSERT' THEN
             UPDATE Forum SET posts=posts+1 WHERE slug=NEW.forum;
+            IF NEW.parent=0 THEN
+                NEW.parent=NEW.id;
+            END IF;
+            if NEW.forum IS NULL THEN
+                RAISE NOTICE 'INSERT INTO Post';
+--                 NEW.forum = (SELECT slug FROM Thread WHERE id=NEW.thread);
+                NEW.forum = 'test_forum';
+            end if;
             RETURN NEW;
         ELSIF TG_OP='DELETE' OR TG_OP='TRUNCATE' THEN
             UPDATE Forum SET posts=posts-1 WHERE slug=OLD.forum;

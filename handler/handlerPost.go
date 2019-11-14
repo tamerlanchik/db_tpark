@@ -42,6 +42,9 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 		return
 	}
+	if posts.Post.Parent == posts.Post.Id {
+		posts.Post.Parent = 0
+	}
 	HttpTools.BodyFromStruct(w, posts)
 	w.WriteHeader(200)
 }

@@ -9,10 +9,10 @@ type Post struct {
 	Author string	`json:"author,omitempty"`
 	Created string	`json:"created,omitempty"`
 	Forum string	`json:"forum,omitempty"`
-	Id int32		`json:"id,omitempty"`
+	Id int64		`json:"id,omitempty"`
 	IsEdited bool 	`json:"isEdited,omitempty"`
 	Message string	`json:"message,omitempty"`
-	Parent int64 `json:"parent,omitempty"`
+	Parent int64 `json:"parent"`
 	Thread int32 `json:"thread,omitempty"`
 }
 

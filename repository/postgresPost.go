@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"db_tpark/structs"
 	"fmt"
+	"github.com/jackc/pgconn"
 	"strconv"
 	"strings"
 	"time"
@@ -107,4 +108,45 @@ func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
 	query = fmt.Sprintf(query, strings.Join(set, ", "))
 	_, err := r.DB.Exec(query, params...)
 	return err
+}
+
+func (r *PostgresRepo) CreatePost(posts []structs.Post) ([]structs.Post, error) {
+	query := `INSERT INTO Post (author, message, parent, thread) VALUES `
+	postfix := `RETURNING forum, id`
+	if len(posts)>1{
+		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
+	}else{
+		query = query + `($1, $2, $3, $4) ` + postfix
+	}
+	var params []interface{}
+	for _, post := range posts {
+		params = append(params, post.Author, post.Message, post.Parent, post.Thread)
+	}
+
+	rows, err := r.DB.Query(query, params...)
+	if err != nil {
+		switch err.(*pgconn.PgError).Code {
+		default:
+			return posts, structs.InternalError{E:"Unknown error"}
+		}
+	}
+	i := 0
+	for rows.Next() {
+		err := rows.Scan(&posts[i].Forum, &posts[i].Id)
+		if err != nil {
+			return posts, structs.InternalError{E: err.Error()}
+		}
+		posts[i].Created = time.Now().Format(structs.OutTimeFormat)
+		posts[i].IsEdited = false
+
+		i++
+	}
+	if i==0 && len(posts) > 0{
+		if _, err:=r.DB.Exec(`SELECT id from Thread WHERE id=$1;`, posts[0].Thread); err != nil {
+			return posts, structs.InternalError{E:structs.ErrorNoThread}
+		}else{
+			return posts, structs.InternalError{E:structs.ErrorNoParent}
+		}
+	}
+	return posts, nil
 }

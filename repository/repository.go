@@ -22,4 +22,6 @@ type Repository interface{
 
 	ClearAll() error
 	GetDBAccount() (map[string]int64, error)
+
+	CreatePost(post []structs.Post) ([]structs.Post, error)
 }
