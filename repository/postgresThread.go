@@ -5,6 +5,8 @@ import (
 	"db_tpark/structs"
 	"fmt"
 	pg "github.com/jackc/pgconn"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -88,4 +90,40 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 	}
 	return threads, nil
 
+}
+
+func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
+	query := `UPDATE Thread SET %s WHERE %s=$1`
+
+	paramCount := 1
+	set := []string{}
+	var params []interface{}
+	var key interface{}
+	var keyName string
+
+	if thread.Id != 0 {
+		key=thread.Id
+		keyName="id"
+	} else {
+		key = thread.Slug
+		keyName="slug"
+	}
+	params = append(params, key)
+
+	if thread.Message != "" {
+		paramCount++
+		set = append(set, "message=$"+strconv.Itoa(paramCount))
+		params = append(params, thread.Message)
+	}
+	if thread.Title != "" {
+		paramCount++
+		set = append(set, "title=$"+strconv.Itoa(paramCount))
+		params = append(params, thread.Title)
+	}
+
+	query = fmt.Sprintf(query, strings.Join(set, ", "), keyName)
+	_, err := r.DB.Exec(query, params...)
+
+
+	return err
 }

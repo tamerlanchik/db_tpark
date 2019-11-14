@@ -88,7 +88,49 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
+	args := mux.Vars(r)
+	id, ok := args["id"]
+	if !ok {
+		fmt.Println("No such a param: ", "id")
+		return
+	}
 
+	var thread structs.Thread
+
+	err := HttpTools.StructFromBody(*r, &thread)
+	if err != nil {
+		fmt.Println("Invalid body")
+		return
+	}
+
+	threadId, err := strconv.ParseInt(id, 10, 8)
+	if err == nil {
+		thread.Id = int32(threadId)
+	} else {
+		thread.Slug= id
+	}
+
+	err = h.repo.EditThread(thread)
+
+	if err != nil {
+		w.WriteHeader(404)
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		return
+	}
+
+	if thread.Slug != ""{
+		thread, err = h.repo.GetThread(thread.Slug)
+	}else{
+		thread, err = h.repo.GetThreadById(int64(thread.Id))
+	}
+	if err != nil {
+		w.WriteHeader(404)
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		return
+	}
+
+	HttpTools.BodyFromStruct(w, thread)
+	w.WriteHeader(200)
 }
 
 func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {

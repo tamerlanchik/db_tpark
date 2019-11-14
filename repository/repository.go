@@ -25,4 +25,5 @@ type Repository interface{
 	GetDBAccount() (map[string]int64, error)
 
 	CreatePost(post []structs.Post) ([]structs.Post, error)
+	EditThread(thread structs.Thread) (error)
 }
