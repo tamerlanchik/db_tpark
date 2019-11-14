@@ -142,6 +142,7 @@ func (r *PostgresRepo) CreatePost(posts []structs.Post) ([]structs.Post, error) 
 		i++
 	}
 	if i==0 && len(posts) > 0{
+		// looking for exact error
 		if _, err:=r.DB.Exec(`SELECT id from Thread WHERE id=$1;`, posts[0].Thread); err != nil {
 			return posts, structs.InternalError{E:structs.ErrorNoThread}
 		}else{

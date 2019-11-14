@@ -13,6 +13,7 @@ type Repository interface{
 
 	CreateThread(thread structs.Thread) (structs.Thread, error)
 	GetThread(slud string) (structs.Thread, error)
+	GetThreadById(id int64) (structs.Thread, error)
 	GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error)
 	GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error)
 

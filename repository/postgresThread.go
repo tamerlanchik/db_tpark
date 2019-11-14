@@ -42,9 +42,21 @@ func (r *PostgresRepo) GetThread(slug string) (structs.Thread, error) {
 
 	var created time.Time
 	err := r.DB.QueryRow(query, slug).
-			Scan(&thread.Author, &created, thread.Forum,
-			thread.Id, thread.Message, thread.Slug, thread.Title, thread.Votes)
+		Scan(&thread.Author, &created, &thread.Forum,
+			&thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
 	thread.Created = created.Format(time.RFC3339)
+	return thread, err
+}
+
+func (r *PostgresRepo) GetThreadById(id int64) (structs.Thread, error) {
+	var thread structs.Thread
+	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
+
+	var created time.Time
+	err := r.DB.QueryRow(query, id).
+		Scan(&thread.Author, &created, &thread.Forum,
+			&thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+	thread.Created = created.Format(structs.OutTimeFormat)
 	return thread, err
 }
 

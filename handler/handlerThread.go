@@ -62,7 +62,29 @@ func (h *ThreadHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
+	args := mux.Vars(r)
+	id, ok := args["id"]
+	if !ok {
+		fmt.Println("No such a param: ", "id")
+		return
+	}
+	threadId, err := strconv.ParseInt(id, 10, 8)
 
+	var thread structs.Thread
+	if err == nil {
+		thread, err = h.repo.GetThreadById(threadId)
+	} else {
+		thread, err = h.repo.GetThread(id)
+	}
+
+	if err != nil {
+		w.WriteHeader(404)
+		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		return
+	}
+
+	HttpTools.BodyFromStruct(w, thread)
+	w.WriteHeader(200)
 }
 
 func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {

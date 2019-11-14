@@ -30,3 +30,6 @@ curl http://localhost:5000/service/status
 
 13) Create Posts
 curl -H "Content-Type: application/json" --data @createpost.json http://localhost:5000/thread/2/create
+14) Get Thread
+curl http://localhost:5000/thread/2/details
+curl http://localhost:5000/thread/test_thread/details
