@@ -47,3 +47,20 @@ func (r *PostgresRepo) ClearAll() error {
 	return err
 }
 
+func (r *PostgresRepo) GetDBAccount() (map[string]int64, error) {
+	//query := `SELECT COUNT(Forum.slug) AS forum, COUNT(Post.id) AS post, COUNT(Thread.id) as thread, COUNT(Users.nickname) AS user
+	//			FROM Forum `
+	query := `SELECT * FROM (SELECT COUNT(Post.id) AS post FROM Post) AS Post,
+							(SELECT COUNT(Thread.id) AS thread FROM Thread) AS Thread,
+							(SELECT COUNT(Forum.slug) AS forum FROM Forum) AS Forum,
+							(SELECT COUNT(Users.nickname) AS user FROM Users) AS Users;`
+	var posts, threads, forums, users int64
+	err := r.DB.QueryRow(query).Scan(&posts, &threads, &forums, &users)
+	res := make(map[string]int64, 4)
+	res["forum"] = forums
+	res["thread"] = threads
+	res["user"] = users
+	res["post"] = posts
+	return res, err
+}
+

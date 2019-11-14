@@ -21,4 +21,5 @@ type Repository interface{
 	EditPost(id int64, newPost structs.Post) error
 
 	ClearAll() error
+	GetDBAccount() (map[string]int64, error)
 }

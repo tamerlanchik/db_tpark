@@ -25,3 +25,5 @@ curl -H "Content-Type: application/json" --data @editpost.json http://localhost:
 
 11) ClearAll
 curl -X POST http://localhost:5000/service/clear
+12) Get Statistics
+curl http://localhost:5000/service/status
