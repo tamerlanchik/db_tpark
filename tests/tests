@@ -16,3 +16,7 @@ curl http://localhost:5000/forum/test_forum/details
 curl "http://localhost:5000/forum/test_forum/threads?limit=100&since=2017-01-01&desc=false"
 8) Get users for Forum
 curl "http://localhost:5000/forum/test_forum/users?limit=100&since=A&desc=false"
+
+9) Get Post Account
+curl "http://localhost:5000/post/1/details
+curl "http://localhost:5000/post/1/details?related=forum,user,thread

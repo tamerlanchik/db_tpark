@@ -8,7 +8,15 @@ import (
 
 type PostgresRepo struct{
 	DB *sql.DB
+	queries map[int]string
 }
+
+const (
+	queryGetUserByNick=`SELECT email, nickname, fullname, about FROM Users WHERE nickname=$1`
+	queryGetPost=`SELECT author, created, forum, id, isEdited, message, parent, thread FROM Post WHERE id=$1`
+	queryGetForum = `SELECT posts, threads, title, usernick FROM Forum WHERE slug=$1`
+	queryGetThread=`SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
+)
 
 func NewPostgresRepo() *PostgresRepo {
 	return &PostgresRepo{}

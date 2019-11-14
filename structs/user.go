@@ -1,5 +1,7 @@
 package structs
 
+import "database/sql"
+
 type User struct {
 	About string `json:"about,omitempty"`
 	Email string `json:"email"`
@@ -7,3 +9,12 @@ type User struct {
 	Nickname string `json:"nickname"`
 }
 
+func (u *User) InflateFromSql(row *sql.Row) error {
+	//	email, nickname, fullname, about
+	return row.Scan(
+			&u.Email,
+			&u.Nickname,
+			&u.Fullname,
+			&u.About,
+		)
+}

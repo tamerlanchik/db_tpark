@@ -15,4 +15,7 @@ type Repository interface{
 	GetThread(slud string) (structs.Thread, error)
 	GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error)
 	GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error)
+
+	GetPost(id int64) (structs.Post, error)
+	GetPostAccount(id int64, fields []string) (structs.PostAccount, error)
 }
