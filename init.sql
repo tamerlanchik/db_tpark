@@ -104,12 +104,14 @@ CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum
             IF NEW.thread!=OLD.thread THEN
                 RAISE EXCEPTION 'const .thread';
             END IF;
-            New.isEdited='true';
+            NEW.isEdited=TRUE;
+            RETURN NEW;
         END IF;
+
     END
 $update_forum_posts$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_forum_posts ON Post;
-CREATE TRIGGER update_forum_posts AFTER UPDATE OR INSERT OR DELETE ON Post
+CREATE TRIGGER update_forum_posts BEFORE UPDATE OR INSERT OR DELETE ON Post
     FOR EACH ROW EXECUTE PROCEDURE update_forum_posts();
 
 

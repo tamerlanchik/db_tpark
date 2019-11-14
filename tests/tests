@@ -20,3 +20,5 @@ curl "http://localhost:5000/forum/test_forum/users?limit=100&since=A&desc=false"
 9) Get Post Account
 curl "http://localhost:5000/post/1/details
 curl "http://localhost:5000/post/1/details?related=forum,user,thread
+10) Edit Post
+curl -H "Content-Type: application/json" --data @editpost.json http://localhost:5000/post/1/details

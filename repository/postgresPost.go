@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"db_tpark/structs"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -84,4 +86,25 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 
 	err = sqlTools.WithTransaction(r.DB, task)
 	return postAccount, err
+}
+
+func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
+	query := `UPDATE Post SET %s WHERE id=$1`
+	paramCount := 1
+	set := []string{}
+	var params []interface{}
+	params = append(params, id)
+	if newPost.Message != "" {
+		paramCount++
+		set = append(set, "message=$"+strconv.Itoa(paramCount))
+		params = append(params, newPost.Message)
+	}
+	if newPost.Parent!=0{
+		paramCount++
+		set = append(set, "parent=$"+strconv.Itoa(paramCount))
+		params = append(params, newPost.Parent)
+	}
+	query = fmt.Sprintf(query, strings.Join(set, ", "))
+	_, err := r.DB.Exec(query, params...)
+	return err
 }
