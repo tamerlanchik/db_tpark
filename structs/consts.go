@@ -5,6 +5,6 @@ import (
 )
 
 const(
-	OutTimeFormat = time.RFC3339
+	OutTimeFormat = time.RFC3339Nano
 )
 

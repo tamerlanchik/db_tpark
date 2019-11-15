@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"db_tpark/structs"
 	"fmt"
+	"github.com/jackc/pgconn"
 )
 
 func (r *PostgresRepo) AddUser(user structs.User) error {
@@ -21,7 +22,7 @@ func (r *PostgresRepo) GetUser(email, nickname string) (structs.User, error) {
 		query = query + `email=$1;`
 		param = email
 	} else if nickname!="" {
-		query = query + `nickname=$1;`
+		query = query + `lower(nickname)=lower($1);`
 		param = nickname
 	}else{
 		return user, fmt.Errorf("Empty params")
@@ -32,9 +33,24 @@ func (r *PostgresRepo) GetUser(email, nickname string) (structs.User, error) {
 }
 
 func (r *PostgresRepo) EditUser(user structs.User) error {
-	query := `UPDATE Users SET email=$1, fullname=$2, about=$3 WHERE nickname=$4;`
+	query := `UPDATE Users SET email=%s, fullname=%s, about=%s WHERE lower(nickname)=lower($4);`
+	statements := []interface{}{
+		structs.NoEmptyWrapper("email", 1),
+		structs.NoEmptyWrapper("fullname", 2),
+		structs.NoEmptyWrapper("about", 3),
+	}
+	query = fmt.Sprintf(query, statements...)
 
 	_, err := r.DB.Exec(query, user.Email, user.Fullname, user.About, user.Nickname)
+	if err != nil {
+		switch err.(*pgconn.PgError).Code{
+		case "23505":
+			return structs.InternalError{E:structs.ErrorDuplicateKey}
+		default:
+			return structs.InternalError{E:structs.ErrorNoUser}
+		}
+	}
+	fmt.Println("a")
 	return err
 }
 

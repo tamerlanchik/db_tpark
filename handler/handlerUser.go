@@ -105,11 +105,31 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	err = h.repo.EditUser(user)
 	if err != nil {
+		switch err.Error() {
+		case structs.ErrorDuplicateKey:
+			resp.
+				SetStatus(409).
+				SetContent(struct{
+					Message string `json:"message"`
+				}{Message:"Email is used " + user.Email})
+			return
+		default:
+			resp.
+				SetStatus(404).
+				SetContent(struct{
+					Message string `json:"message"`
+				}{Message:"Can-t find user with nickname " + nickname})
+			return
+		}
+	}
+	user, err = h.repo.GetUser("", nickname)
+	if err != nil {
 		resp.
 			SetStatus(404).
 			SetContent(struct{
-					Message string `json:"message"`
-				}{Message:"Can-t find user with nickname " + nickname})
+				Message string `json:"message"`
+			}{Message:"Can-t find user with nickname " + nickname})
+		return
 	}
 	resp.SetStatus(200).SetError(user)
 	return

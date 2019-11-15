@@ -1,38 +1,38 @@
 1) Create user
-curl -H "Content-Type: application/json" --data @createuser.json http://localhost:5000/user/jack/create
+curl -H "Content-Type: application/json" --data @createuser.json http://localhost:5000/api/user/jack/create
 2) Get User
-curl http://localhost:5000/user/jack/profile
+curl http://localhost:5000/api/user/jack/profile
 3) Edit User
-curl -H "Content-Type: application/json" --data @edituser.json http://localhost:5000/user/jack/profile
+curl -H "Content-Type: application/json" --data @edituser.json http://localhost:5000/api/user/jack/profile
 
 4) Create Forum
-curl -H "Content-Type: application/json" --data @createforum-NoUser.json http://localhost:5000/forum/create
+curl -H "Content-Type: application/json" --data @createforum-NoUser.json http://localhost:5000/api/forum/create
 5) Create Thread
-curl -H "Content-Type: application/json" --data @createthread.json http://localhost:5000/forum/ewdewd/create
-curl -H "Content-Type: application/json" --data @createthread.json http://localhost:5000/forum/test_forum/create
+curl -H "Content-Type: application/json" --data @createthread.json http://localhost:5000/api/forum/ewdewd/create
+curl -H "Content-Type: application/json" --data @createthread.json http://localhost:5000/api/forum/test_forum/create
 6) Get Forum
-curl http://localhost:5000/forum/test_forum/details
+curl http://localhost:5000/api/forum/test_forum/details
 7) Get Threads for Forum
-curl "http://localhost:5000/forum/test_forum/threads?limit=100&since=2017-01-01&desc=false"
+curl "http://localhost:5000/api/forum/test_forum/threads?limit=100&since=2017-01-01&desc=false"
 8) Get users for Forum
-curl "http://localhost:5000/forum/test_forum/users?limit=100&since=A&desc=false"
+curl "http://localhost:5000/api/forum/test_forum/users?limit=100&since=A&desc=false"
 
 9) Get Post Account
-curl "http://localhost:5000/post/1/details
-curl "http://localhost:5000/post/1/details?related=forum,user,thread
+curl "http://localhost:5000/api/post/1/details
+curl "http://localhost:5000/api/post/1/details?related=forum,user,thread
 10) Edit Post
-curl -H "Content-Type: application/json" --data @editpost.json http://localhost:5000/post/1/details
+curl -H "Content-Type: application/json" --data @editpost.json http://localhost:5000/api/post/1/details
 
 11) ClearAll
-curl -X POST http://localhost:5000/service/clear
+curl -X POST http://localhost:5000/api/service/clear
 12) Get Statistics
-curl http://localhost:5000/service/status
+curl http://localhost:5000/api/service/status
 
 13) Create Posts
-curl -H "Content-Type: application/json" --data @createpost.json http://localhost:5000/thread/2/create
+curl -H "Content-Type: application/json" --data @createpost.json http://localhost:5000/api/thread/2/create
 14) Get Thread
-curl http://localhost:5000/thread/2/details
-curl http://localhost:5000/thread/test_thread/details
+curl http://localhost:5000/api/thread/2/details
+curl http://localhost:5000/api/thread/test_thread/details
 15) EditThread
-curl -H "Content-Type: application/json" --data @editthread.json http://localhost:5000/thread/2/details
-curl -H "Content-Type: application/json" --data @editthread.json http://localhost:5000/thread/test_thread/details
+curl -H "Content-Type: application/json" --data @editthread.json http://localhost:5000/api/thread/2/details
+curl -H "Content-Type: application/json" --data @editthread.json http://localhost:5000/api/thread/test_thread/details

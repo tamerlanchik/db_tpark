@@ -68,7 +68,7 @@ func InflateRouter(r *mux.Router) error {
 func AddContentTypeMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Println(r.URL.Path)
+			fmt.Println(r.URL)
 			next.ServeHTTP(w, r)
 			fmt.Println(w.Header())
 		})

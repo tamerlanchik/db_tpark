@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"2019_2_Next_Level/pkg/HttpTools"
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"github.com/go-park-mail-ru/2019_2_Next_Level/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
@@ -28,15 +28,18 @@ func(h *ThreadHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ThreadHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	id, ok := args["id"]
-	threadId, err := strconv.ParseInt(id, 10, 8)
-	if !ok || err != nil {
+	threadId, errId := strconv.ParseInt(id, 10, 8)
+	if !ok {
 		fmt.Println("No such a param: ", "nick")
 		return
 	}
 	var post []structs.Post
-	err = HttpTools.StructFromBody(*r, &post)
+	err := HttpTools.StructFromBody(*r, &post)
 	if err != nil {
 		fmt.Println("Error struct got")
 		return
@@ -48,20 +51,27 @@ func (h *ThreadHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err.(structs.InternalError).E{
 		case structs.ErrorNoThread:
-			w.WriteHeader(404)
+			//w.WriteHeader(404)
+			resp.SetStatus(404)
 			break
 		case structs.ErrorNoParent:
-			w.WriteHeader(409)
+			//w.WriteHeader(409)
+			resp.SetStatus(409)
 			break
 		}
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		//HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		resp.SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
-	HttpTools.BodyFromStruct(w, post)
-	w.WriteHeader(201)
+	resp.SetStatus(201).SetContent(post)
+	//HttpTools.BodyFromStruct(w, post)
+	//w.WriteHeader(201)
 }
 
 func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
@@ -78,16 +88,21 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		w.WriteHeader(404)
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
+		//w.WriteHeader(404)
+		//HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
 
-	HttpTools.BodyFromStruct(w, thread)
-	w.WriteHeader(200)
+	resp.SetStatus(200).SetContent(thread)
+	//HttpTools.BodyFromStruct(w, thread)
+	//w.WriteHeader(200)
 }
 
 func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
@@ -113,8 +128,9 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	err = h.repo.EditThread(thread)
 
 	if err != nil {
-		w.WriteHeader(404)
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
+		//w.WriteHeader(404)
+		//HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
 
@@ -124,13 +140,15 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		thread, err = h.repo.GetThreadById(int64(thread.Id))
 	}
 	if err != nil {
-		w.WriteHeader(404)
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		//w.WriteHeader(404)
+		//HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
+		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
 
-	HttpTools.BodyFromStruct(w, thread)
-	w.WriteHeader(200)
+	resp.SetStatus(200).SetContent(thread)
+	//HttpTools.BodyFromStruct(w, thread)
+	//w.WriteHeader(200)
 }
 
 func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {

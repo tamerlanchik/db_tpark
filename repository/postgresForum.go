@@ -23,7 +23,7 @@ func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 
 	if e, ok := err.(*pg.PgError); ok {
 		switch e.Code {
-		case "23503":
+		case "23503", "23502":
 			err = structs.InternalError{E: structs.ErrorNoUser}
 			break
 		case "23505":
@@ -37,11 +37,10 @@ func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 }
 
 func (r *PostgresRepo) GetForum(slug string) (structs.Forum, error) {
-	query := `SELECT posts, threads, title, usernick FROM Forum WHERE slug=$1;`
+	query := `SELECT posts, threads, title, usernick, slug FROM Forum WHERE lower(slug)=lower($1);`
 
 	var forum structs.Forum
-	err := r.DB.QueryRow(query, slug).Scan(&forum.Posts, &forum.Threads, &forum.Title, &forum.User)
-	forum.Slug = slug
+	err := r.DB.QueryRow(query, slug).Scan(&forum.Posts, &forum.Threads, &forum.Title, &forum.User, &forum.Slug)
 	return forum, err
 }
 

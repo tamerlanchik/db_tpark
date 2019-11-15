@@ -11,14 +11,17 @@ DROP TABLE IF EXISTS Post;
 DROP TABLE IF EXISTS Thread;
 DROP TABLE IF EXISTS Forum;
 DROP TABLE IF EXISTS Users;
+
+-- _______Users________
 CREATE TABLE Users (
     about TEXT NOT NULL DEFAULT '',
-    email CITEXT NOT NULL PRIMARY KEY CONSTRAINT email_right CHECK(email ~ '^.*@[A-Za-z0-9\-_\.]*$'),
+    email CITEXT NOT NULL UNIQUE CONSTRAINT email_right CHECK(email ~ '^.*@[A-Za-z0-9\-_\.]*$'),
     fullname TEXT NOT NULL DEFAULT '',
-    nickname CITEXT COLLATE pg_catalog."en-US-x-icu" CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$') UNIQUE
+    nickname CITEXT COLLATE pg_catalog."en-US-x-icu" PRIMARY KEY CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$')
 );
+CREATE UNIQUE INDEX users_nickname_index on Users (LOWER(nickname));
 
--- DROP TABLE IF EXISTS Forum;
+-- _________Forum____________
 CREATE TABLE Forum (
     posts BIGINT CONSTRAINT non_negative_posts_count CHECK (posts>=0) NOT NULL DEFAULT 0,  --autoincrement
     slug TEXT PRIMARY KEY UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
@@ -26,25 +29,27 @@ CREATE TABLE Forum (
     title TEXT NOT NULL DEFAULT '',
     userNick CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL
 );
+CREATE UNIQUE INDEX forum_slug_index on Forum (LOWER(slug));
 
+-- _______Thread__________
 
 CREATE OR REPLACE FUNCTION slug_thread() RETURNS TEXT LANGUAGE SQL AS
 $$ SELECT array_to_string(array(select substr('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789-_',((random()*(62-1)+1)::integer),1) from generate_series(1,10)),'') $$;
 
--- DROP TABLE IF EXISTS Thread;
 CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     forum TEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
     id BIGSERIAL PRIMARY KEY,
     message TEXT NOT NULL,
-    slug TEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$') DEFAULT slug_thread(),
+    slug TEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
     title TEXT NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 
+-- _______Post___________
 
--- DROP TABLE IF EXISTS Post;
 CREATE TABLE Post (
     author CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL,
     created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -78,6 +83,16 @@ DROP TRIGGER IF EXISTS user_readonly ON Users;
 CREATE TRIGGER user_readonly BEFORE UPDATE ON Users
     FOR EACH ROW EXECUTE PROCEDURE user_readonly();
 
+-- Триггер на Forum
+CREATE OR REPLACE FUNCTION forum_user() RETURNS trigger AS $forum_user$
+    BEGIN
+        NEW.userNick = (SELECT nickname FROM Users WHERE lower(nickname)=lower(NEW.usernick));
+        RETURN NEW;
+    END
+$forum_user$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS forum_user ON Forum;
+CREATE TRIGGER forum_user BEFORE INSERT ON Forum
+    FOR EACH ROW EXECUTE PROCEDURE forum_user();
 
 -- Триггер на Post-ы. Отвечает за счетчики в Forum и за read-only данные Post
 CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum_posts$

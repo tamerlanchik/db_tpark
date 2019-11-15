@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"2019_2_Next_Level/pkg/HttpTools"
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"github.com/go-park-mail-ru/2019_2_Next_Level/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type ForumHandler struct {
@@ -27,6 +28,9 @@ func (h *ForumHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	var forum structs.Forum
 	err := HttpTools.StructFromBody(*r, &forum)
 	if err != nil {
@@ -38,21 +42,24 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 		e := err.(structs.InternalError)
 		switch e.E{
 		case structs.ErrorNoUser:
-			HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fine user with nick " + forum.User})
-			w.WriteHeader(404)
+			resp.
+				SetStatus(404).
+				SetContent(structs.Error{Message:"Can-t fine user with nick " + forum.User})
 			return
 		case structs.ErrorDuplicateKey:
 			forum, err = h.repo.GetForum(forum.Slug)
-			w.WriteHeader(409)
-			HttpTools.BodyFromStruct(w, forum)
+			resp.SetStatus(409).SetContent(forum)
 		}
-	}else{
-		w.WriteHeader(201)
-		HttpTools.BodyFromStruct(w, forum)
+		return
 	}
+	forum, _ = h.repo.GetForum(forum.Slug)
+	resp.SetStatus(201).SetContent(forum)
 }
 
 func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
@@ -66,32 +73,41 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.Forum = forumSlug
+	if req.Created == "" {
+		req.Created = time.Now().Format(structs.OutTimeFormat)
+	}
 	thread, err := h.repo.CreateThread(req)
 	if err != nil {
 		e := err.(structs.InternalError)
 		switch e.E{
 		case structs.ErrorNoUser:
-			HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fine user with nick " + req.Author})
-			w.WriteHeader(404)
+			resp.
+				SetStatus(404).
+				SetContent(structs.Error{Message:"Can-t fine user with nick " + req.Author})
 			return
 		case structs.ErrorNoForum:
-			HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t find forum with slug " + req.Forum})
-			w.WriteHeader(404)
+			resp.
+				SetStatus(404).
+				SetContent(structs.Error{Message:"Can-t find forum with slug " + req.Forum})
 			return
 		case structs.ErrorDuplicateKey:
 			thread, err := h.repo.GetThread(req.Slug)
 			if err != nil {
 				fmt.Println(err)
 			}
-			w.WriteHeader(409)
-			HttpTools.BodyFromStruct(w, thread)
+			resp.
+				SetStatus(409).
+				SetContent(thread)
 		}
 	}
-	w.WriteHeader(201)
-	HttpTools.BodyFromStruct(w, thread)
+	//thread.Slug = ""
+	resp.SetStatus(201).SetContent(thread)
 }
 
 func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
@@ -101,16 +117,19 @@ func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
 	var forum structs.Forum
 	forum, err := h.repo.GetForum(forumSlug)
 	if err != nil {
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
-		w.WriteHeader(404)
+		resp.
+			SetStatus(404).
+			SetContent(structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
 		return
 	}
-	HttpTools.BodyFromStruct(w, forum)
-	w.WriteHeader(200)
+	resp.SetStatus(200).SetContent(forum)
 
 }
 
 func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
@@ -118,26 +137,24 @@ func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 8)
-	if err != nil {
-		return
-	}
+
 	since := r.FormValue("since")
 	desc, err := strconv.ParseBool(r.FormValue("desc"))
-	if err != nil {
-		return
-	}
 
 	threads, err := h.repo.GetThreads(forumSlug, limit, since, desc)
-	if err != nil {
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
-		w.WriteHeader(404)
+	if err != nil{
+		fmt.Println("Error in GetThreads: ", err, len(threads), forumSlug)
+		resp.
+			SetStatus(404).SetContent(structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
 		return
 	}
-	HttpTools.BodyFromStruct(w, threads)
-	w.WriteHeader(200)
+	resp.SetStatus(200).SetContent(threads)
 }
 
 func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
@@ -156,15 +173,8 @@ func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.repo.GetUsers(forumSlug, limit, since, desc)
 	if err != nil || len(users)==0{
-		HttpTools.BodyFromStruct(w, structs.Error{Message:"Can-t find forum with slug " + forumSlug})
-		w.WriteHeader(404)
+		resp.SetStatus(404).SetContent(structs.Error{Message:"Can-t find forum with slug " + forumSlug})
 		return
 	}
-	HttpTools.BodyFromStruct(w, users)
-	w.WriteHeader(200)
+	resp.SetStatus(200).SetContent(users)
 }
-
-func (h *ForumHandler) GetThreadDetails(w http.ResponseWriter, r *http.Request) {
-
-}
-
