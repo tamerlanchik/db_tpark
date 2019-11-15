@@ -24,6 +24,9 @@ func(h *UserHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
@@ -39,30 +42,29 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	user.Nickname = nickname
 
 	err = h.repo.AddUser(user)
-	var ans structs.User
 	if err == nil {
-		ans = user
-		w.WriteHeader(201)
+		resp.SetStatus(201).SetContent(user)
+		return
 	} else {
-		existUser, err := h.repo.GetUser(user.Email, "")
-		if err != nil {
-			existUser, err = h.repo.GetUser("", user.Nickname)
-			if err != nil {
-				fmt.Println("user not exist. Cannot create user")
-				return
-			}
+		var ans []structs.User
+
+		existUserByEmail, err := h.repo.GetUser(user.Email, "")
+		if err == nil {
+			ans = append(ans, existUserByEmail)
 		}
-		ans = existUser
-		w.WriteHeader(409)
+
+		existUserByNick, err := h.repo.GetUser("", user.Nickname)
+		if err == nil && existUserByNick.Email!=existUserByEmail.Email{
+			ans = append(ans, existUserByNick)
+		}
+		resp.SetStatus(409).SetContent(ans)
 	}
-	err = HttpTools.BodyFromStruct(w, ans)
-	if err != nil {
-		fmt.Println("Cannot write to body")
-	}
-	return
 }
 
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
@@ -72,23 +74,21 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	user, err := h.repo.GetUser("", nickname)
 	if err != nil {
 		fmt.Println(err)
-		err = HttpTools.BodyFromStruct(w, struct{
-			Message string `json:"message"`
-		}{Message:"Can-t find user with nickname " + nickname})
-		if err != nil {
-			fmt.Println(err)
-		}
-		w.WriteHeader(404)
+		resp.
+			SetStatus(404).
+			SetContent(struct{
+					Message string `json:"message"`
+				}{Message:"Can-t find user with nickname " + nickname})
+
 		return
 	}
-	err = HttpTools.BodyFromStruct(w, user)
-	if err!=nil {
-		fmt.Println(err)
-	}
-	w.WriteHeader(200)
+	resp.SetStatus(200).SetContent(user)
 }
 
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
@@ -105,17 +105,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	err = h.repo.EditUser(user)
 	if err != nil {
-		w.WriteHeader(404)
-		err = HttpTools.BodyFromStruct(w, struct{
-			Message string `json:"message"`
-		}{Message:"Can-t find user with nickname " + nickname})
-		if err != nil {
-			fmt.Println(err)
-		}
+		resp.
+			SetStatus(404).
+			SetContent(struct{
+					Message string `json:"message"`
+				}{Message:"Can-t find user with nickname " + nickname})
 	}
-	err = HttpTools.BodyFromStruct(w, user)
-	if err != nil {
-		fmt.Println("Cannot write to body")
-	}
+	resp.SetStatus(200).SetError(user)
 	return
 }

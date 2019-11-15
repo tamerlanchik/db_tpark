@@ -13,9 +13,9 @@ DROP TABLE IF EXISTS Forum;
 DROP TABLE IF EXISTS Users;
 CREATE TABLE Users (
     about TEXT NOT NULL DEFAULT '',
-    email VARCHAR(255) NOT NULL PRIMARY KEY CONSTRAINT email_right CHECK(email ~ '^.*@[A-Za-z0-9\-_\.]*$'),
+    email CITEXT NOT NULL PRIMARY KEY CONSTRAINT email_right CHECK(email ~ '^.*@[A-Za-z0-9\-_\.]*$'),
     fullname TEXT NOT NULL DEFAULT '',
-    nickname CITEXT COLLATE pg_catalog."en-US-x-icu" CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9]*$') UNIQUE
+    nickname CITEXT COLLATE pg_catalog."en-US-x-icu" CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$') UNIQUE
 );
 
 -- DROP TABLE IF EXISTS Forum;

@@ -30,7 +30,7 @@ func main() {
 
 
 
-	mainRouter := mux.NewRouter()
+	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
 	InflateRouter(mainRouter)
 
 	err := http.ListenAndServe(":"+port, mainRouter)
@@ -38,6 +38,8 @@ func main() {
 }
 
 func InflateRouter(r *mux.Router) error {
+	r.Use(AddContentTypeMiddleware())
+
 	repo := repository.NewPostgresRepo()
 	err := repo.Init(dbuser, dbpass, dbhost, dbport, dbname);
 	if err != nil {
@@ -59,5 +61,20 @@ func InflateRouter(r *mux.Router) error {
 	userRouter := r.PathPrefix("/user").Subrouter()
 	handler.NewUserHandler(repo).InflateRouter(userRouter)
 
+
 	return nil
 }
+
+func AddContentTypeMiddleware() mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Println(r.URL.Path)
+			next.ServeHTTP(w, r)
+			fmt.Println(w.Header())
+		})
+
+	}
+}
+
+
+//w.Header().Set("Content-Type", "application/json")

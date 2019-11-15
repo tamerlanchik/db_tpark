@@ -1,7 +1,10 @@
 package structs
 
-import "time"
+import (
+	"time"
+)
 
 const(
 	OutTimeFormat = time.RFC3339
 )
+
