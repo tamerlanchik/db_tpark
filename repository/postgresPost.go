@@ -18,7 +18,8 @@ func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	var created time.Time
 	err := r.DB.QueryRow(query, id).
 		Scan(&post.Author, &created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
-	post.Created = created.Format(time.RFC3339)
+	post.Created = created.Format(structs.OutTimeFormat)
+	post.ChangeParent()
 	return post, err
 }
 func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAccount, error) {
@@ -110,17 +111,27 @@ func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
 	return err
 }
 
-func (r *PostgresRepo) CreatePost(posts []structs.Post) ([]structs.Post, error) {
-	query := `INSERT INTO Post (author, message, parent, thread) VALUES `
-	postfix := `RETURNING forum, id`
-	if len(posts)>1{
-		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
-	}else{
-		query = query + `($1, $2, $3, $4) ` + postfix
+func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]structs.Post, error) {
+	if len(posts) == 0 {
+		return posts, nil
 	}
+	query := `INSERT INTO Post (author, message, parent, thread) VALUES `
+	postfix := `RETURNING forum, id, created`
+
+	if len(posts) == 1{
+		query = query + `($1, $2, $3, $4) ` + postfix
+	}else{
+		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
+	}
+
+	threadId, err := r.getThreadId(thread)
+	if err != nil {
+		return posts, err
+	}
+
 	var params []interface{}
 	for _, post := range posts {
-		params = append(params, post.Author, post.Message, post.Parent, post.Thread)
+		params = append(params, post.Author, post.Message, post.Parent, threadId)
 	}
 
 	rows, err := r.DB.Query(query, params...)
@@ -132,13 +143,14 @@ func (r *PostgresRepo) CreatePost(posts []structs.Post) ([]structs.Post, error) 
 	}
 	i := 0
 	for rows.Next() {
-		err := rows.Scan(&posts[i].Forum, &posts[i].Id)
+		var created time.Time
+		err := rows.Scan(&(posts[i].Forum), &(posts[i].Id), &(created))
 		if err != nil {
 			return posts, structs.InternalError{E: err.Error()}
 		}
-		posts[i].Created = time.Now().Format(structs.OutTimeFormat)
+		posts[i].Created = created.Format(structs.OutTimeFormat)
 		posts[i].IsEdited = false
-
+		posts[i].Thread = int32(threadId)
 		i++
 	}
 	if i==0 && len(posts) > 0{
@@ -150,4 +162,67 @@ func (r *PostgresRepo) CreatePost(posts []structs.Post) ([]structs.Post, error) 
 		}
 	}
 	return posts, nil
+}
+
+func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string, sort string, desc bool) ([]structs.Post, error) {
+	threads := make([]structs.Post, 0)
+	threadId, err := r.getThreadId(threadKey)
+	if err != nil {
+		return threads, err
+	}
+
+	var rows *sql.Rows
+	params := make([]interface{}, 0,2)
+	params = append(params, threadId)
+	var placeholderSince, placeholderDesc, placeholderLimit string
+
+	if since != "" {
+		params = append(params, since)
+		placeholderSince = `AND created>=$`+strconv.Itoa(len(params))
+		if desc {
+			placeholderSince = `AND created<=$`+strconv.Itoa(len(params))
+		}
+	}
+
+	if desc {
+		placeholderDesc = `DESC`
+	}
+
+	if limit != 0 {
+		params = append(params, limit)
+		placeholderLimit = `LIMIT $`+strconv.Itoa(len(params))
+	}
+	//if counter==13{
+	//	fmt.Println()
+	//}
+	if sort=="flat" {
+		query := `SELECT author, forum, created, id, isEdited, message, parent, thread FROM Post WHERE thread=$1 %s ORDER BY created, id %s %s`
+
+		query = fmt.Sprintf(query, placeholderSince, placeholderDesc, placeholderLimit)
+		rows, err = r.DB.Query(query, params...)
+		if err != nil {
+			return threads, err
+		}
+
+		for rows.Next(){
+			thread := structs.Post{}
+			var created time.Time
+			err := rows.Scan(&thread.Author, &thread.Forum, &created, &thread.Id, &thread.IsEdited, &thread.Message, &thread.Parent, &thread.Thread)
+			thread.Created = created.Format(structs.OutTimeFormat)
+			thread.ChangeParent()
+			if err != nil {
+				return threads, err
+			}
+			threads = append(threads, thread)
+		}
+		if len(threads) == 0 {
+			var sl string
+			err = r.DB.QueryRow(`SELECT slug from thread WHERE id=$1`, threadId).Scan(&sl)
+			if err != nil {
+				return threads, err
+			}
+		}
+	}
+
+	return threads, nil
 }

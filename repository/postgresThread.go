@@ -13,15 +13,17 @@ import (
 var counter int
 
 func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, error) {
-	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES ($1, $2, $3, %s::timestamptz, $5, %s) RETURNING id, slug, votes`
-	//query = fmt.Sprintf(query, structs.NoEmptyWrapper("NOW()", 4))
-
+	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES ($1, (SELECT slug from Forum WHERE lower(slug)=lower($2)), $3, %s::timestamptz, $5, %s) RETURNING id, slug, votes, forum`
+	counter++
 	query = fmt.Sprintf(query, `COALESCE($4, NOW())`, `NULLIF($6, '')`)
 	var slug sql.NullString
 	t, _ := time.Parse(structs.OutTimeFormat, thread.Created)
 	err := r.DB.QueryRow(query, thread.Author, thread.Forum, thread.Message, t, thread.Title, thread.Slug).
-			Scan(&thread.Id, &slug, &thread.Votes)
+			Scan(&thread.Id, &slug, &thread.Votes, &thread.Forum)
 	thread.Slug = slug.String
+	if counter>=125{
+		fmt.Println(counter)
+	}
 	if err != nil {
 		if e, ok := err.(*pg.PgError); ok {
 			switch e.Code{
@@ -38,22 +40,23 @@ func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, erro
 			default:
 				fmt.Println(e.Code)
 			}
+		} else {
+			err = structs.InternalError{E: structs.ErrorNoForum}
 		}
 	}
-
 
 	return thread, err
 }
 
 func (r *PostgresRepo) GetThread(slug string) (structs.Thread, error) {
 	var thread structs.Thread
-	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE slug=$1`
+	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE lower(slug)=lower($1)`
 
 	var created time.Time
 	err := r.DB.QueryRow(query, slug).
 		Scan(&thread.Author, &created, &thread.Forum,
 			&thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
-	thread.Created = created.Format(time.RFC3339)
+	thread.Created = created.Format(structs.OutTimeFormat)
 	return thread, err
 }
 
@@ -67,6 +70,19 @@ func (r *PostgresRepo) GetThreadById(id int64) (structs.Thread, error) {
 			&thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
 	thread.Created = created.Format(structs.OutTimeFormat)
 	return thread, err
+}
+
+func (r *PostgresRepo) GetThreadUnknownKey(key interface{}) (structs.Thread, error) {
+	//if threadId, ok := key.(int64); ok {
+	//	return r.GetThreadById(threadId)
+	//} else {
+	//	return r.GetThread(key.(string))
+	//}
+	threadId, err := r.getThreadId(key)
+	if err != nil {
+		return structs.Thread{}, err
+	}
+	return r.GetThreadById(threadId)
 }
 
 func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error) {
@@ -155,6 +171,39 @@ func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
 	query = fmt.Sprintf(query, strings.Join(set, ", "), keyName)
 	_, err := r.DB.Exec(query, params...)
 
-
 	return err
+}
+
+func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int) error {
+	counter++
+	fmt.Println(counter)
+	id, err := r.getThreadId(threadKey)
+	if err != nil {
+		return err
+	}
+	if counter==131{
+		fmt.Println(counter)
+	}
+	query := `SELECT vote_thread($1, $2, $3)`
+	_, err = r.DB.Exec(query, id, user, voice)
+	return err
+}
+
+func (r *PostgresRepo) getThreadId(threadKey interface{}) (int64, error) {
+
+	var threadId int64
+	var ok bool
+	if threadId, ok = threadKey.(int64); ok {
+		return threadId, nil
+	}
+	if threadId, err := strconv.ParseInt(threadKey.(string), 10, 64); err == nil {
+		return threadId, nil
+	}
+	err := r.DB.QueryRow(`SELECT * FROM get_thread_id_by_slug($1)`, threadKey.(string)).Scan(&threadId)
+	//queryGetThreadId := `SELECT id FROM Thread WHERE lower(slug)=lower($1);`
+	//err := r.DB.QueryRow(queryGetThreadId, threadKey.(string)).Scan(&threadId)
+	if err != nil {
+		return -1, err
+	}
+	return threadId, nil
 }

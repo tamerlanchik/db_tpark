@@ -7,5 +7,11 @@
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
       <jdbc-url>jdbc:postgresql://localhost:5432/dbtpark</jdbc-url>
     </data-source>
+    <data-source source="LOCAL" name="NextLevel" uuid="b3f3c824-b6d7-4b31-a93a-e2d0e7111a45">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:5432/nextlevel</jdbc-url>
+    </data-source>
   </component>
 </project>

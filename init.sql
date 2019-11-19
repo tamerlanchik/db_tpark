@@ -24,7 +24,7 @@ CREATE UNIQUE INDEX users_nickname_index on Users (LOWER(nickname));
 -- _________Forum____________
 CREATE TABLE Forum (
     posts BIGINT CONSTRAINT non_negative_posts_count CHECK (posts>=0) NOT NULL DEFAULT 0,  --autoincrement
-    slug TEXT PRIMARY KEY UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
+    slug CITEXT PRIMARY KEY UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
     threads INTEGER CONSTRAINT non_negative_threads_count CHECK (threads>=0) DEFAULT 0,
     title TEXT NOT NULL DEFAULT '',
     userNick CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL
@@ -39,10 +39,10 @@ $$ SELECT array_to_string(array(select substr('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg
 CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    forum TEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
+    forum CITEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
     id BIGSERIAL PRIMARY KEY,
     message TEXT NOT NULL,
-    slug TEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
+    slug CITEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
     title TEXT NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );
@@ -53,7 +53,7 @@ CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 CREATE TABLE Post (
     author CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL,
     created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    forum TEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
+    forum CITEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
     id BIGSERIAL PRIMARY KEY,
     isEdited BOOLEAN NOT NULL DEFAULT false,
     message TEXT NOT NULL DEFAULT '',
@@ -65,6 +65,7 @@ CREATE TABLE Post (
 CREATE TABLE vote (
     thread BIGINT REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE CASCADE,
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+    vote SMALLINT CONSTRAINT check_vote CHECK (vote>=-1 AND vote <=1 ) DEFAULT 0,
     UNIQUE (thread, author)
 );
 
@@ -97,6 +98,9 @@ CREATE TRIGGER forum_user BEFORE INSERT ON Forum
 -- Триггер на Post-ы. Отвечает за счетчики в Forum и за read-only данные Post
 CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum_posts$
     BEGIN
+        IF TG_OP='INSERT' OR TG_OP='UPDATE' THEN
+            NEW.forum = (SELECT forum FROM Thread WHERE Thread.id=NEW.thread);
+        end if;
         IF TG_OP='INSERT' THEN
             UPDATE Forum SET posts=posts+1 WHERE slug=NEW.forum;
             IF NEW.parent=0 THEN
@@ -170,17 +174,50 @@ CREATE TRIGGER update_forum_threads AFTER UPDATE OR INSERT OR DELETE ON Thread
 CREATE OR REPLACE FUNCTION update_thread_vote_counter() RETURNS trigger AS $update_thread_vote_counter$
     BEGIN
         IF TG_OP='INSERT' THEN
-            UPDATE Thread SET votes=votes+1 WHERE id=NEW.thread;
+            UPDATE Thread SET votes=votes+NEW.vote WHERE id=NEW.thread;
             RETURN NEW;
-        ELSE -- DELETE
-            UPDATE Thread SET votes=votes-1 WHERE id=OLD.thread;
-            RETURN OLD;
-        END IF;
+        ELSIF TG_OP='UPDATE' THEN
+            UPDATE Thread SET votes=votes+(NEW.vote-OLD.vote) WHERE id=NEW.thread;
+            RETURN NEW;
+        ELSE
+            RAISE EXCEPTION 'Invalid call update_thread_vote_counter()';
+        end if;
     END
 $update_thread_vote_counter$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_thread_vote ON Vote;
-CREATE TRIGGER update_thread_vote AFTER INSERT OR DELETE ON Vote
+CREATE TRIGGER update_thread_vote AFTER INSERT OR UPDATE ON Vote
     FOR EACH ROW EXECUTE PROCEDURE update_thread_vote_counter();
+
+
+CREATE OR REPLACE FUNCTION vote_thread(thread_ INTEGER, author_ citext, voice_ INTEGER) RETURNS void AS $update_thread_vote_counter$
+    DECLARE
+        currentVote SMALLINT;
+    BEGIN
+        currentVote := (SELECT vote FROM Vote WHERE thread=thread_ AND lower(author)=lower(author_));
+
+        if currentVote IS NULL THEN
+            INSERT INTO Vote (thread, author, vote) VALUES (thread_, author_, voice_);
+        else
+--             if currentVote*voice_<0 then --если нужно поменять запись
+--                 UPDATE Vote SET vote=voice_ WHERE lower(thread)=lower(thread_) AND lower(author)=lower(author_);
+--             end if;
+            UPDATE Vote SET vote=voice_ WHERE thread=thread_ AND lower(author)=lower(author_);
+--         IF voice_>0 THEN
+--             INSERT INTO Vote (thread, author) VALUES (thread_, author_);
+--         ELSE
+--             DELETE FROM Vote WHERE lower(thread)=lower(thread_) AND lower(author)=lower(author_);
+--         end if;
+        end if;
+    END
+$update_thread_vote_counter$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION get_thread_id_by_slug(slugArg citext) RETURNS INTEGER AS $get_thread_id_by_slug$
+    BEGIN
+        RETURN (SELECT id FROM Thread WHERE lower(slug)=lower(slugArg));
+    END
+$get_thread_id_by_slug$ LANGUAGE plpgsql;
+
 
 INSERT INTO Users (email, fullname, nickname, about) VALUES ('ivanov.vanya@mail.ry', 'Ian', 'tamerlanchik', 'About me');
 INSERT INTO Forum (slug, title, userNick) VALUES ('test_forum', 'Hello, world', 'tamerlanchik');

@@ -14,16 +14,20 @@ type Repository interface{
 	CreateThread(thread structs.Thread) (structs.Thread, error)
 	GetThread(slud string) (structs.Thread, error)
 	GetThreadById(id int64) (structs.Thread, error)
+	GetThreadUnknownKey(key interface{}) (structs.Thread, error)
 	GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error)
 	GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error)
 
 	GetPost(id int64) (structs.Post, error)
 	GetPostAccount(id int64, fields []string) (structs.PostAccount, error)
+	GetPosts(threadSKey interface{}, limit int64, since string, sort string, desc bool) ([]structs.Post, error)
 	EditPost(id int64, newPost structs.Post) error
 
 	ClearAll() error
 	GetDBAccount() (map[string]int64, error)
 
-	CreatePost(post []structs.Post) ([]structs.Post, error)
+	CreatePost(threadId interface{}, post []structs.Post) ([]structs.Post, error)
 	EditThread(thread structs.Thread) (error)
+	VoteThread(threadId interface{}, user string, voice int) error
+
 }

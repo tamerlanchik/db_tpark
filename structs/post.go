@@ -35,6 +35,12 @@ func (p *Post) InflateFromSql(row *sql.Row) error {
 		&p.Parent,
 		&p.Thread,
 	)
-	p.Created = created.Format(time.RFC3339)
+	p.Created = created.Format(OutTimeFormat)
 	return err
+}
+
+func (p *Post) ChangeParent() {
+	if p.Parent==p.Id{
+		p.Parent = 0
+	}
 }

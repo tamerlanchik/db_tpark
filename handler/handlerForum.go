@@ -98,6 +98,7 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 			resp.
 				SetStatus(409).
 				SetContent(thread)
+			return
 		}
 	}
 	//thread.Slug = ""

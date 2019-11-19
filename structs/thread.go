@@ -29,6 +29,6 @@ func (t *Thread) InflateFromSql(row *sql.Row) error {
 			&t.Title,
 			&t.Votes,
 		)
-	t.Created = created.Format(time.RFC3339)
+	t.Created = created.Format(OutTimeFormat)
 	return err
 }
