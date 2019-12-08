@@ -95,19 +95,17 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
-		//w.WriteHeader(404)
-		//HttpTools.BodyFromStruct(w, structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
 
 	resp.SetStatus(200).SetContent(thread)
-	//HttpTools.BodyFromStruct(w, thread)
-	//w.WriteHeader(200)
 }
 
 func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
+	debugCounter++;
+	fmt.Println(debugCounter)
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
@@ -124,13 +122,16 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	threadId, err := strconv.ParseInt(id, 10, 8)
+	threadId, err := strconv.ParseInt(id, 10, 64)
 	if err == nil {
 		thread.Id = int32(threadId)
 	} else {
 		thread.Slug= id
 	}
 
+	if debugCounter>=4 {
+		fmt.Println(debugCounter)
+	}
 	err = h.repo.EditThread(thread)
 
 	if err != nil {
@@ -197,7 +198,7 @@ func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("No such a param: ", "nick")
 		return
 	}
-	limit, _ := strconv.ParseInt(r.FormValue("limit"), 10, 8)
+	limit, _ := strconv.ParseInt(r.FormValue("limit"), 10, 64)
 
 
 	since := r.FormValue("since")

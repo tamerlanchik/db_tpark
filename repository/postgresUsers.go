@@ -7,6 +7,8 @@ import (
 	"github.com/jackc/pgconn"
 )
 
+var counter int64
+
 func (r *PostgresRepo) AddUser(user structs.User) error {
 	query := `INSERT INTO Users (email, nickname, fullname, about) VALUES($1, $2, $3, $4);`
 
@@ -55,23 +57,45 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 }
 
 func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
+	counter++
+	fmt.Println(counter)
 	users := make([]structs.User, 0)
 	query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
-     			(SELECT DISTINCT usernick as "author" FROM Forum WHERE slug=$1 AND usernick>=$2)
-     			UNION
-				(SELECT DISTINCT author FROM Thread WHERE forum=$1 AND author>=$2)
+				(SELECT DISTINCT author FROM Thread WHERE forum=$1)
 				UNION
-				(SELECT DISTINCT author FROM Post WHERE forum=$1 AND author>=$2)
-				) ORDER BY nickname %s LIMIT $3;`
+				(SELECT DISTINCT author FROM Post WHERE forum=$1)
+				) %s ORDER BY nickname %s %s;`
+	var cmpPlaceholder, limitPlaceholder, orderPlaceholder string
+	paramsCount := 1
+	params := make([]interface{}, 0)
+	params = append(params, forumSlug)
 	if desc {
-		query = fmt.Sprintf(query, "DESC")
+		if since!="" {
+			cmpPlaceholder = `AND nickname<$2`
+			paramsCount++
+			params = append(params, since)
+		}
+		orderPlaceholder = "DESC"
 	}else{
-		query = fmt.Sprintf(query, "")
+		if since!="" {
+			cmpPlaceholder = `AND nickname>$2`
+			paramsCount++
+			params = append(params, since)
+		}
+		orderPlaceholder = "ASC"
 	}
+	if limit!=0 {
+		paramsCount++
+		limitPlaceholder = fmt.Sprintf(`LIMIT $%d`, paramsCount)
+		params = append(params, limit)
+	}
+	query = fmt.Sprintf(query, cmpPlaceholder, orderPlaceholder, limitPlaceholder)
 
 	var rows *sql.Rows
 	var err error
-	rows, err = r.DB.Query(query, forumSlug, since, limit)
+	fmt.Println(query)
+	fmt.Println(forumSlug, since, limit)
+	rows, err = r.DB.Query(query, params...)
 	if err != nil {
 		return users, err
 	}

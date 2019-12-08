@@ -12,12 +12,14 @@ DROP TABLE IF EXISTS Thread;
 DROP TABLE IF EXISTS Forum;
 DROP TABLE IF EXISTS Users;
 
+
 -- _______Users________
 CREATE TABLE Users (
     about TEXT NOT NULL DEFAULT '',
     email CITEXT NOT NULL UNIQUE CONSTRAINT email_right CHECK(email ~ '^.*@[A-Za-z0-9\-_\.]*$'),
     fullname TEXT NOT NULL DEFAULT '',
-    nickname CITEXT COLLATE pg_catalog."en-US-x-icu" PRIMARY KEY CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$')
+--     nickname CITEXT COLLATE pg_catalog."en-US-x-icu" PRIMARY KEY CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$')
+    nickname CITEXT COLLATE "POSIX" PRIMARY KEY CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$')
 );
 CREATE UNIQUE INDEX users_nickname_index on Users (LOWER(nickname));
 
@@ -49,6 +51,11 @@ CREATE TABLE Thread (
 CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 
 -- _______Post___________
+CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $get_post_thread$
+    BEGIN
+        RETURN (SELECT thread FROM Post WHERE id=post_);
+    END;
+$get_post_thread$ LANGUAGE plpgsql;
 
 CREATE TABLE Post (
     author CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL,
@@ -57,7 +64,8 @@ CREATE TABLE Post (
     id BIGSERIAL PRIMARY KEY,
     isEdited BOOLEAN NOT NULL DEFAULT false,
     message TEXT NOT NULL DEFAULT '',
-    parent BIGINT,
+    parent BIGINT REFERENCES Post (id) ON DELETE CASCADE ON UPDATE RESTRICT
+        CONSTRAINT par CHECK (get_thread_by_post(parent)=thread),
     thread INTEGER REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE RESTRICT,
     path bigint[] not null
 );
@@ -69,6 +77,12 @@ CREATE TABLE vote (
     vote SMALLINT CONSTRAINT check_vote CHECK (vote>=-1 AND vote <=1 ) DEFAULT 0,
     UNIQUE (thread, author)
 );
+
+CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $get_post_thread$
+    BEGIN
+        RETURN (SELECT thread FROM Post WHERE id=post_);
+    END;
+$get_post_thread$ LANGUAGE plpgsql;
 
 ------------Триггеры-------------------------
 
@@ -231,6 +245,21 @@ CREATE OR REPLACE FUNCTION get_thread_id_by_slug(slugArg citext) RETURNS INTEGER
         RETURN (SELECT id FROM Thread WHERE lower(slug)=lower(slugArg));
     END
 $get_thread_id_by_slug$ LANGUAGE plpgsql;
+
+CREATE INDEX IF NOT EXISTS post_path_id ON Post (id, (path[1]));
+CREATE INDEX IF NOT EXISTS post_path ON Post (path);
+CREATE INDEX IF NOT EXISTS post_path_1 ON Post ((path[1]));
+CREATE INDEX IF NOT EXISTS post_thread_id ON Post (thread, id);
+CREATE INDEX IF NOT EXISTS post_thread ON Post (thread);
+CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
+CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
+CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
+CREATE INDEX IF NOT EXISTS idx_sth ON Post (lower(author));
+CREATE INDEX IF not exists thread_slug ON Thread (slug);
+CREATE INDEX IF NOT EXISTS thread_forum_created ON Thread (forum, created);
+CREATE INDEX IF not exists thread_author_forum ON Thread (author, forum);
+CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
+CREATE INDEX IF NOT EXISTS vote_nickname_thread ON Vote (author, thread);
 
 
 INSERT INTO Users (email, fullname, nickname, about) VALUES ('ivanov.vanya@mail.ry', 'Ian', 'tamerlanchik', 'About me');

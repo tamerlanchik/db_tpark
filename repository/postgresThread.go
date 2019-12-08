@@ -10,20 +10,17 @@ import (
 	"time"
 )
 
-var counter int
 
 func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, error) {
 	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES ($1, (SELECT slug from Forum WHERE lower(slug)=lower($2)), $3, %s::timestamptz, $5, %s) RETURNING id, slug, votes, forum`
-	counter++
+
 	query = fmt.Sprintf(query, `COALESCE($4, NOW())`, `NULLIF($6, '')`)
 	var slug sql.NullString
 	t, _ := time.Parse(structs.OutTimeFormat, thread.Created)
 	err := r.DB.QueryRow(query, thread.Author, thread.Forum, thread.Message, t, thread.Title, thread.Slug).
 			Scan(&thread.Id, &slug, &thread.Votes, &thread.Forum)
 	thread.Slug = slug.String
-	if counter>=125{
-		fmt.Println(counter)
-	}
+
 	if err != nil {
 		if e, ok := err.(*pg.PgError); ok {
 			switch e.Code{
@@ -73,11 +70,6 @@ func (r *PostgresRepo) GetThreadById(id int64) (structs.Thread, error) {
 }
 
 func (r *PostgresRepo) GetThreadUnknownKey(key interface{}) (structs.Thread, error) {
-	//if threadId, ok := key.(int64); ok {
-	//	return r.GetThreadById(threadId)
-	//} else {
-	//	return r.GetThread(key.(string))
-	//}
 	threadId, err := r.getThreadId(key)
 	if err != nil {
 		return structs.Thread{}, err
@@ -167,7 +159,9 @@ func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
 		set = append(set, "title=$"+strconv.Itoa(paramCount))
 		params = append(params, thread.Title)
 	}
-
+	if paramCount<=1 {
+		return nil
+	}
 	query = fmt.Sprintf(query, strings.Join(set, ", "), keyName)
 	_, err := r.DB.Exec(query, params...)
 

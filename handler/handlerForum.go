@@ -137,7 +137,7 @@ func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("No such a param: ", "nick")
 		return
 	}
-	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 8)
+	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 64)
 
 	since := r.FormValue("since")
 	desc, err := strconv.ParseBool(r.FormValue("desc"))
@@ -162,18 +162,24 @@ func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("No such a param: ", "slug")
 		return
 	}
-	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 8)
-	if err != nil {
-		return
-	}
+	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 64)
+	//if err != nil {
+	//	return
+	//}
 	since := r.FormValue("since")
 	desc, err := strconv.ParseBool(r.FormValue("desc"))
 	if err != nil {
+		desc = false
+	}
+
+	forum, err := h.repo.GetForum(forumSlug)
+	if err != nil || forum.Slug==""{
+		resp.SetStatus(404).SetContent(structs.Error{Message:"Can-t find forum with slug " + forumSlug})
 		return
 	}
 
 	users, err := h.repo.GetUsers(forumSlug, limit, since, desc)
-	if err != nil || len(users)==0{
+	if err != nil{
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can-t find forum with slug " + forumSlug})
 		return
 	}

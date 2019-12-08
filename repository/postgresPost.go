@@ -10,8 +10,10 @@ import (
 	"strings"
 	"time"
 )
-
+var postCounter int64
 func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
+	postCounter++
+	fmt.Println(postCounter)
 	query := queryGetPost
 
 	var post structs.Post
@@ -23,6 +25,8 @@ func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	return post, err
 }
 func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAccount, error) {
+	postCounter++
+	fmt.Println(postCounter)
 	var postAccount structs.PostAccount
 	post, err := r.DB.Prepare(queryGetPost)
 	if err != nil {
@@ -39,7 +43,7 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 			postAccount.Author = &structs.User{}
 			break
 		case "forum":
-			thread, err = r.DB.Prepare(queryGetThread)
+			forum, err = r.DB.Prepare(queryGetThread)
 			if err != nil {
 				return postAccount, err
 			}
@@ -107,11 +111,24 @@ func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
 		params = append(params, newPost.Parent)
 	}
 	query = fmt.Sprintf(query, strings.Join(set, ", "))
-	_, err := r.DB.Exec(query, params...)
+	err := sqlTools.WithTransaction(r.DB, func() error {
+		_, err := r.DB.Exec(query, params...)
+		return err
+	})
+	//_, err := r.DB.Exec(query, params...)
 	return err
 }
 
 func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]structs.Post, error) {
+	postCounter++
+	threadId, err := r.getThreadId(thread)
+	if err != nil {
+		return posts, structs.InternalError{E: structs.ErrorNoThread}
+	}
+	var cnt int64;
+	if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+		return posts, structs.InternalError{E: structs.ErrorNoThread}
+	}
 	if len(posts) == 0 {
 		return posts, nil
 	}
@@ -124,11 +141,6 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
 	}
 
-	threadId, err := r.getThreadId(thread)
-	if err != nil {
-		return posts, err
-	}
-
 	var params []interface{}
 	for _, post := range posts {
 		var parent sql.NullInt64;
@@ -139,8 +151,9 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		params = append(params, post.Author, post.Message, parent, threadId)
 	}
 
+
 	rows, err := r.DB.Query(query, params...)
-	if err != nil {
+	if err != nil || (rows!=nil && rows.Err()!=nil){
 		switch err.(*pgconn.PgError).Code {
 		default:
 			return posts, structs.InternalError{E:"Unknown error"}
@@ -158,10 +171,15 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		posts[i].Thread = int32(threadId)
 		i++
 	}
+
+	//var cnt int64;
 	if i==0 && len(posts) > 0{
 		// looking for exact error
-		if _, err:=r.DB.Exec(`SELECT id from Thread WHERE id=$1;`, posts[0].Thread); err != nil {
-			return posts, structs.InternalError{E:structs.ErrorNoThread}
+		if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+			return posts, structs.InternalError{E: structs.ErrorNoThread}
+		} else if row:= r.DB.QueryRow(`SELECT COUNT(nickname) FROM Users WHERE nickname=$1`, posts[0].Author); row.Scan(&cnt)!=nil || cnt==0 {
+			return posts, structs.InternalError{E: structs.ErrorNoThread}
+
 		}else{
 			return posts, structs.InternalError{E:structs.ErrorNoParent}
 		}

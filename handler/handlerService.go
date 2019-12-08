@@ -26,7 +26,10 @@ func (h *ServiceHandler) ClearAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
-	var resp struct{
+	resp := HttpTools.NewResponse(w)
+	defer resp.Send()
+
+	var response struct{
 		Forum int64 `json:"forum"`
 		Post int64 `json:"post"`
 		Thread int64 `json:"thread"`
@@ -38,9 +41,10 @@ func (h *ServiceHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
-	resp.Forum = data["forum"]
-	resp.Post = data["post"]
-	resp.Thread = data["thread"]
-	resp.User = data["user"]
-	HttpTools.BodyFromStruct(w, resp)
+	response.Forum = data["forum"]
+	response.Post = data["post"]
+	response.Thread = data["thread"]
+	response.User = data["user"]
+	resp.SetStatus(200).SetContent(response)
+
 }
