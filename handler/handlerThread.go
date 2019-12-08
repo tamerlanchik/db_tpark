@@ -202,6 +202,9 @@ func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	since := r.FormValue("since")
 	sort := r.FormValue("sort")
+	if sort=="" {
+		sort = "flat"
+	}
 	desc, _ := strconv.ParseBool(r.FormValue("desc"))
 
 	posts, err := h.repo.GetPosts(threadKey, limit, since, sort, desc)

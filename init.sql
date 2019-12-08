@@ -33,8 +33,8 @@ CREATE UNIQUE INDEX forum_slug_index on Forum (LOWER(slug));
 
 -- _______Thread__________
 
-CREATE OR REPLACE FUNCTION slug_thread() RETURNS TEXT LANGUAGE SQL AS
-$$ SELECT array_to_string(array(select substr('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789-_',((random()*(62-1)+1)::integer),1) from generate_series(1,10)),'') $$;
+-- CREATE OR REPLACE FUNCTION slug_thread() RETURNS TEXT LANGUAGE SQL AS
+-- $$ SELECT array_to_string(array(select substr('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789-_',((random()*(62-1)+1)::integer),1) from generate_series(1,10)),'') $$;
 
 CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
@@ -57,8 +57,9 @@ CREATE TABLE Post (
     id BIGSERIAL PRIMARY KEY,
     isEdited BOOLEAN NOT NULL DEFAULT false,
     message TEXT NOT NULL DEFAULT '',
-    parent BIGINT REFERENCES Post (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    thread INTEGER REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE RESTRICT
+    parent BIGINT,
+    thread INTEGER REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    path bigint[] not null
 );
 
 
@@ -103,9 +104,9 @@ CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum
         end if;
         IF TG_OP='INSERT' THEN
             UPDATE Forum SET posts=posts+1 WHERE slug=NEW.forum;
-            IF NEW.parent=0 THEN
-                NEW.parent=NEW.id;
-            END IF;
+--             IF NEW.parent=0 THEN
+--                 NEW.parent=NEW.id;
+--             END IF;
             if NEW.forum IS NULL THEN
                 RAISE NOTICE 'INSERT INTO Post';
 --                 NEW.forum = (SELECT slug FROM Thread WHERE id=NEW.thread);
@@ -140,6 +141,19 @@ $update_forum_posts$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_forum_posts ON Post;
 CREATE TRIGGER update_forum_posts BEFORE UPDATE OR INSERT OR DELETE ON Post
     FOR EACH ROW EXECUTE PROCEDURE update_forum_posts();
+
+CREATE OR REPLACE FUNCTION post_path() RETURNS TRIGGER AS
+$post_path$
+BEGIN
+    if TG_OP='INSERT' then
+        NEW.path = (SELECT path FROM Post WHERE id = NEW.parent) || NEW.id;
+        RETURN NEW;
+    end if;
+END;
+$post_path$ LANGUAGE plpgsql;
+
+CREATE TRIGGER post_path BEFORE INSERT ON Post
+    FOR EACH ROW EXECUTE PROCEDURE post_path();
 
 
 -- Триггер на Thread-ы. Отвечает за счетчик в Forums и const-поля
