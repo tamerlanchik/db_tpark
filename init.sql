@@ -6,6 +6,7 @@
 --     fullname TEXT NOT NULL DEFAULT '',
 --     nickname CITEXT COLLATE "English_United States.1252" CONSTRAINT nick_right CHECK(nickname'^[A-Za-z0-9]*$') UNIQUE
 -- );
+CREATE EXTENSION citext;
 DROP TABLE IF EXISTS Vote;
 DROP TABLE IF EXISTS Post;
 DROP TABLE IF EXISTS Thread;
@@ -146,7 +147,9 @@ CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum
             IF NEW.thread!=OLD.thread THEN
                 RAISE EXCEPTION 'const .thread';
             END IF;
-            NEW.isEdited=TRUE;
+            if NEW.message!=OLD.message OR NEW.parent!=OLD.parent then
+                NEW.isEdited=TRUE;
+            end if;
             RETURN NEW;
         END IF;
 
@@ -155,6 +158,16 @@ $update_forum_posts$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_forum_posts ON Post;
 CREATE TRIGGER update_forum_posts BEFORE UPDATE OR INSERT OR DELETE ON Post
     FOR EACH ROW EXECUTE PROCEDURE update_forum_posts();
+
+CREATE OR REPLACE FUNCTION forum_user() RETURNS trigger AS $forum_user$
+    BEGIN
+        NEW.userNick = (SELECT nickname FROM Users WHERE lower(nickname)=lower(NEW.usernick));
+        RETURN NEW;
+    END
+$forum_user$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS forum_user ON Forum;
+CREATE TRIGGER forum_user BEFORE INSERT ON Forum
+    FOR EACH ROW EXECUTE PROCEDURE forum_user();
 
 CREATE OR REPLACE FUNCTION post_path() RETURNS TRIGGER AS
 $post_path$

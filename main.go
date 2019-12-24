@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	dbuser = "postgres"
-	dbpass = "postgres"
+	dbuser = "docker"
+	dbpass = "docker"
 	dbhost = "0.0.0.0"
 	dbport = "5432"
 	dbname = "dbtpark"
@@ -30,19 +30,37 @@ func main() {
 
 
 
+	fmt.Println("Start server")
 	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
-	InflateRouter(mainRouter)
+	if err:= InflateRouter(mainRouter); err !=nil {
+		fmt.Println("Error inflating router:", err)
+		//return
+	}
+	fmt.Println("Router inflated")
+	//mainRouter.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {fmt.Println(r.URL)})
 
-	err := http.ListenAndServe(":"+port, mainRouter)
+	mainRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("This is a catch-all route"))
+		fmt.Println("FF", r.URL)
+	})
+	loggedRouter := AddContentTypeMiddleware()(mainRouter)
+	//loggedRouter := handlers.LoggingHandler(os.Stdout, mainRouter)
+	http.Handle("/", loggedRouter)
+	fmt.Println("Prestart server")
+	err := http.ListenAndServe(":"+port, loggedRouter)
 	fmt.Println("Stop server: ", err)
 }
 
 func InflateRouter(r *mux.Router) error {
+
 	r.Use(AddContentTypeMiddleware())
+
+
 
 	repo := repository.NewPostgresRepo()
 	err := repo.Init(dbuser, dbpass, dbhost, dbport, dbname);
 	if err != nil {
+		fmt.Println("Error during init postgres")
 		return err
 	}
 
@@ -68,9 +86,11 @@ func InflateRouter(r *mux.Router) error {
 func AddContentTypeMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Println(r.URL)
+			fmt.Println("Access")
+			fmt.Println("Path: ", r.URL)
+
 			next.ServeHTTP(w, r)
-			fmt.Println(w.Header())
+			fmt.Println("Header result: ", w.Header())
 		})
 
 	}

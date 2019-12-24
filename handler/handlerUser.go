@@ -4,7 +4,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
-	"github.com/go-park-mail-ru/2019_2_Next_Level/pkg/HttpTools"
+	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -24,8 +24,11 @@ func(h *UserHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("CreateUser: prestart")
 	resp := HttpTools.NewResponse(w)
+	fmt.Println("CreateUser: resp", resp)
 	defer resp.Send()
+	fmt.Println("CreateUser: start")
 
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
@@ -41,7 +44,9 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Nickname = nickname
 
+	fmt.Println("CreateUser: before-repo")
 	err = h.repo.AddUser(user)
+	fmt.Println("CreateUser: after-repo")
 	if err == nil {
 		resp.SetStatus(201).SetContent(user)
 		return
@@ -57,6 +62,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		if err == nil && existUserByNick.Email!=existUserByEmail.Email{
 			ans = append(ans, existUserByNick)
 		}
+		fmt.Println("Error in Create user: ", err)
 		resp.SetStatus(409).SetContent(ans)
 	}
 }

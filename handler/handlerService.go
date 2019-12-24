@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"2019_2_Next_Level/pkg/HttpTools"
+	"db_tpark/pkg/HttpTools"
 	"db_tpark/repository"
 	"fmt"
 	"github.com/gorilla/mux"

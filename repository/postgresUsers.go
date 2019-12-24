@@ -10,9 +10,12 @@ import (
 var counter int64
 
 func (r *PostgresRepo) AddUser(user structs.User) error {
+	fmt.Println("AddUser: start")
 	query := `INSERT INTO Users (email, nickname, fullname, about) VALUES($1, $2, $3, $4);`
+	fmt.Println("AddUser: afterQueryCreate")
 
 	_, err := r.DB.Exec(query, user.Email, user.Nickname, user.Fullname, user.About)
+	fmt.Println("AddUser: execResult", err)
 	return err
 }
 

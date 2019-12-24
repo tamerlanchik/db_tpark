@@ -5,7 +5,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
-	"github.com/go-park-mail-ru/2019_2_Next_Level/pkg/HttpTools"
+	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
@@ -17,6 +17,9 @@ type PostHandler struct {
 	repo repository.Repository
 }
 
+var GetPostCounter int
+var EditPostCounter int
+
 func NewPostHandler(repo repository.Repository) *PostHandler {
 	return &PostHandler{repo: repo}
 }
@@ -27,14 +30,16 @@ func (h *PostHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
+	GetPostCounter++
+	fmt.Println("GetPostDetails", GetPostCounter)
+	if GetPostCounter>=18{
+		fmt.Println("GetPostDetails")
+	}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
 	fmt.Println("D", debugCounter, time.Now())
 
-	if debugCounter>=35{
-		fmt.Println(debugCounter)
-	}
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
@@ -65,10 +70,15 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
+	EditPostCounter++
+	fmt.Println("Edit post", EditPostCounter)
+	if EditPostCounter>=3 {
+		fmt.Println("Edit post", EditPostCounter)
+	}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
-	time.Sleep(5*time.Second)
+	//time.Sleep(5*time.Second)
 	fmt.Println("A", debugCounter, time.Now())
 
 	args := mux.Vars(r)
@@ -99,6 +109,5 @@ func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}
-	post.IsEdited = true;
 	resp.SetStatus(200).SetContent(post)
 }

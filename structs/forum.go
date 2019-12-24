@@ -16,5 +16,6 @@ func (f *Forum) InflateFromSql(row *sql.Row) error{
 		&f.Threads,
 		&f.Title,
 		&f.User,
+		&f.Slug,
 	)
 }

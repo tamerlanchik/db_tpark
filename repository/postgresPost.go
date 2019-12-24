@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"2019_2_Next_Level/pkg/sqlTools"
 	"database/sql"
+	"db_tpark/pkg/sqlTools"
 	"db_tpark/structs"
 	"fmt"
 	"github.com/jackc/pgconn"
@@ -43,7 +43,7 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 			postAccount.Author = &structs.User{}
 			break
 		case "forum":
-			forum, err = r.DB.Prepare(queryGetThread)
+			forum, err = r.DB.Prepare(queryGetForum)
 			if err != nil {
 				return postAccount, err
 			}
@@ -109,6 +109,9 @@ func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
 		paramCount++
 		set = append(set, "parent=$"+strconv.Itoa(paramCount))
 		params = append(params, newPost.Parent)
+	}
+	if len(set) == 0 {
+		return nil
 	}
 	query = fmt.Sprintf(query, strings.Join(set, ", "))
 	err := sqlTools.WithTransaction(r.DB, func() error {

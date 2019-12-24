@@ -4,7 +4,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
-	"github.com/go-park-mail-ru/2019_2_Next_Level/pkg/HttpTools"
+	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"

@@ -4,7 +4,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
-	"github.com/go-park-mail-ru/2019_2_Next_Level/pkg/HttpTools"
+	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
@@ -42,6 +42,7 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 		e := err.(structs.InternalError)
 		switch e.E{
 		case structs.ErrorNoUser:
+			fmt.Println("Error in Create Forum: ", err)
 			resp.
 				SetStatus(404).
 				SetContent(structs.Error{Message:"Can-t fine user with nick " + forum.User})
@@ -50,6 +51,7 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 			forum, err = h.repo.GetForum(forum.Slug)
 			resp.SetStatus(409).SetContent(forum)
 		}
+		fmt.Println("Error in Create Forum: ", err)
 		return
 	}
 	forum, _ = h.repo.GetForum(forum.Slug)
