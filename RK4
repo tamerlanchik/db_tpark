@@ -9,6 +9,30 @@
 }
 
 1. Для акций GOOGL выставить предпоследнюю котировку в 0 для всех записей за прошлый год на французских (FR) биржах
+	db.exchange.update(
+	{$expr: {$gt: [{$size: "$quotes"}, 2]}}, 
+	[
+		{$set: 
+		{
+			"quotes": 
+			{
+				$concatArrays: 
+				[
+					{
+						$slice:
+						["$quotes", 0, {$subtract:[{$size:"$quotes"}, 2]}]
+					},
+					[0],
+					{
+						$slice:
+							["$quotes", -1]
+						
+					}
+				]
+			}
+		}
+		}])
+	Reference: https://jira.mongodb.org/browse/SERVER-1014
 2. Определить средний объем операций по акциям YNDX за каждый месяц 2014 года
 3. Вставить 0 значение в массив котировок для всех записей, где число котировок меньше 24
 	db.exchange.update({$where: "this.quotes.length<24"}, {$push: {quotes: 0}}, {multi: true})
@@ -31,5 +55,3 @@
 7. Недостатки реляционных СУБД
 8. Строгая и eventual consistency
 9. Основные особенности mongo
-
-
