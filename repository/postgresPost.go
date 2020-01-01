@@ -13,7 +13,7 @@ import (
 var postCounter int64
 func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	postCounter++
-	fmt.Println(postCounter)
+	//fmt.Println(postCounter)
 	query := queryGetPost
 
 	var post structs.Post
@@ -26,7 +26,7 @@ func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 }
 func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAccount, error) {
 	postCounter++
-	fmt.Println(postCounter)
+	//fmt.Println(postCounter)
 	var postAccount structs.PostAccount
 	post, err := r.DB.Prepare(queryGetPost)
 	if err != nil {
@@ -262,7 +262,7 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 	}
 	rows, err = r.DB.Query(query, params...)
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return threads, err
 	}
 
@@ -273,7 +273,7 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 		thread.Created = created.Format(structs.OutTimeFormat)
 		thread.ChangeParent()
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 			return threads, err
 		}
 		threads = append(threads, thread)

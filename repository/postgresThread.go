@@ -35,7 +35,7 @@ func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, erro
 				err = structs.InternalError{E: structs.ErrorDuplicateKey}
 				break
 			default:
-				fmt.Println(e.Code)
+				//fmt.Println(e.Code)
 			}
 		} else {
 			err = structs.InternalError{E: structs.ErrorNoForum}
@@ -62,17 +62,28 @@ func (r *PostgresRepo) GetThreadById(id int64) (structs.Thread, error) {
 	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
 
 	var created time.Time
+	var slug sql.NullString
 	err := r.DB.QueryRow(query, id).
 		Scan(&thread.Author, &created, &thread.Forum,
-			&thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+			&thread.Id, &thread.Message, &slug, &thread.Title, &thread.Votes)
 	thread.Created = created.Format(structs.OutTimeFormat)
+	if slug.Valid {
+		thread.Slug = slug.String
+	}
 	return thread, err
 }
 
 func (r *PostgresRepo) GetThreadUnknownKey(key interface{}) (structs.Thread, error) {
-	threadId, err := r.getThreadId(key)
-	if err != nil {
-		return structs.Thread{}, err
+	var threadId int64
+	var ok bool
+	var err error
+	fmt.Println(key)
+	if threadId, ok = key.(int64); !ok {	// если передали не id
+		fmt.Println("Not id")
+		threadId, err = r.getThreadId(key)	// резолвим slug
+		if err != nil {
+			return structs.Thread{}, err
+		}
 	}
 	return r.GetThreadById(threadId)
 }
@@ -102,7 +113,7 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 		placeholderLimit = `LIMIT $`+strconv.Itoa(len(params))
 	}
 	if counter==13{
-		fmt.Println()
+		//fmt.Println()
 	}
 	query = fmt.Sprintf(query, placeholderSince, placeholderDesc, placeholderLimit)
 	rows, err = r.DB.Query(query, params...)
@@ -170,13 +181,13 @@ func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
 
 func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int) error {
 	counter++
-	fmt.Println(counter)
+	//fmt.Println(counter)
 	id, err := r.getThreadId(threadKey)
 	if err != nil {
 		return err
 	}
 	if counter==131{
-		fmt.Println(counter)
+		//fmt.Println(counter)
 	}
 	query := `SELECT vote_thread($1, $2, $3)`
 	_, err = r.DB.Exec(query, id, user, voice)

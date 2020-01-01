@@ -4,13 +4,13 @@ import (
 
 	"db_tpark/repository"
 	"db_tpark/structs"
-	"fmt"
+	//"fmt"
 	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
+	//"time"
 )
 
 type PostHandler struct {
@@ -31,20 +31,20 @@ func (h *PostHandler) InflateRouter(r *mux.Router) {
 
 func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	GetPostCounter++
-	fmt.Println("GetPostDetails", GetPostCounter)
+	//fmt.Println("GetPostDetails", GetPostCounter)
 	if GetPostCounter>=18{
-		fmt.Println("GetPostDetails")
+		//fmt.Println("GetPostDetails")
 	}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
-	fmt.Println("D", debugCounter, time.Now())
+	//fmt.Println("D", debugCounter, time.Now())
 
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		//fmt.Println("No such a param: ", "nick")
 		return
 	}
 	rel := r.URL.Query()["related"]
@@ -54,7 +54,7 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	}
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		fmt.Println("Wrong param: ", "id")
+		//fmt.Println("Wrong param: ", "id")
 		return
 	}
 	posts, err := h.repo.GetPostAccount(idInt, related)
@@ -71,32 +71,32 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 
 func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
 	EditPostCounter++
-	fmt.Println("Edit post", EditPostCounter)
+	//fmt.Println("Edit post", EditPostCounter)
 	if EditPostCounter>=3 {
-		fmt.Println("Edit post", EditPostCounter)
+		//fmt.Println("Edit post", EditPostCounter)
 	}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
 	//time.Sleep(5*time.Second)
-	fmt.Println("A", debugCounter, time.Now())
+	//fmt.Println("A", debugCounter, time.Now())
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		//fmt.Println("No such a param: ", "nick")
 		return
 	}
 
 	var post structs.Post
 	err := HttpTools.StructFromBody(*r, &post)
 	if err != nil {
-		fmt.Println("No such a param: ", "post")
+		//fmt.Println("No such a param: ", "post")
 		return
 	}
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		fmt.Println("Wrong param: ", "id")
+		//fmt.Println("Wrong param: ", "id")
 		return
 	}
 	err = h.repo.EditPost(idInt, post)

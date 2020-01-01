@@ -2,7 +2,7 @@ package HttpTools
 
 import (
 	"encoding/json"
-	"fmt"
+	//"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -63,11 +63,11 @@ func (r *Response) Copy() Response {
 
 func (r *Response) Send() {
 	if r.body == nil {
-		fmt.Println("Nil error")
+		//fmt.Println("Nil error")
 	}
 	body, err := json.Marshal(r.body)
 	if err != nil {
-		fmt.Println("Cannot encode json")
+		//fmt.Println("Cannot encode json")
 		return
 	}
 	r.writer.Header().Set("Content-Type", "application/json")

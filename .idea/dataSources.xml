@@ -13,5 +13,23 @@
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
       <jdbc-url>jdbc:postgresql://localhost:5432/nextlevel</jdbc-url>
     </data-source>
+    <data-source source="LOCAL" name="nlmail_test@localhost" uuid="a646ef64-c905-4f96-ab59-fad7c908d813">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:5432/nlmail_test</jdbc-url>
+    </data-source>
+    <data-source source="LOCAL" name="movielens@localhost" uuid="be29bc75-8501-4262-a69c-81af1db63585">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:5432/movielens</jdbc-url>
+    </data-source>
+    <data-source source="LOCAL" name="geo@localhost" uuid="1238ee0e-278a-4415-a934-1944a148d96a">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:5432/geo</jdbc-url>
+    </data-source>
   </component>
 </project>

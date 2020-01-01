@@ -3,7 +3,7 @@ package handler
 import (
 	"db_tpark/pkg/HttpTools"
 	"db_tpark/repository"
-	"fmt"
+	//"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -38,7 +38,7 @@ func (h *ServiceHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.repo.GetDBAccount()
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return
 	}
 	response.Forum = data["forum"]

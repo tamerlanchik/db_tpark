@@ -3,7 +3,7 @@ package repository
 import (
 	//"database/sql"
 	"db_tpark/structs"
-	"fmt"
+	//"fmt"
 	pg "github.com/jackc/pgconn"
 )
 
@@ -30,7 +30,7 @@ func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 			err = structs.InternalError{E: structs.ErrorDuplicateKey}
 			break
 		default:
-			fmt.Println(e.Code)
+			//fmt.Println(e.Code)
 		}
 	}
 	return err
