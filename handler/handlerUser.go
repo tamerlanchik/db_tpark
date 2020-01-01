@@ -3,6 +3,8 @@ package handler
 import (
 	"db_tpark/repository"
 	"db_tpark/structs"
+	"fmt"
+
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
@@ -33,13 +35,13 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		fmt.Println("No such a param: ", "nick")
 		return
 	}
 	var user structs.User
 	err := HttpTools.StructFromBody(*r, &user)
 	if err != nil {
-		//fmt.Println("Cannot parse Createuser body")
+		fmt.Println("Cannot parse Createuser body")
 		return
 	}
 	user.Nickname = nickname
@@ -48,6 +50,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	err = h.repo.AddUser(user)
 	//fmt.Println("CreateUser: after-repo")
 	if err == nil {
+		fmt.Println("Error in CreateUser-AddUser: ", err)
 		resp.SetStatus(201).SetContent(user)
 		return
 	} else {
@@ -55,6 +58,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 		existUserByEmail, err := h.repo.GetUser(user.Email, "")
 		if err == nil {
+			fmt.Println("Error in CreateUser-GetUser: ", err)
 			ans = append(ans, existUserByEmail)
 		}
 
@@ -79,7 +83,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.repo.GetUser("", nickname)
 	if err != nil {
-		//fmt.Println(err)
+		fmt.Println("Error in GetUser: ", err)
 		resp.
 			SetStatus(404).
 			SetContent(struct{
@@ -98,19 +102,20 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		fmt.Println("No such a param: ", "nick")
 		return
 	}
 	var user structs.User
 	err := HttpTools.StructFromBody(*r, &user)
 	if err != nil {
-		//fmt.Println("Cannot parse Updateeuser body")
+		fmt.Println("Cannot parse Updateeuser body")
 		return
 	}
 	user.Nickname = nickname
 
 	err = h.repo.EditUser(user)
 	if err != nil {
+		fmt.Println("Error in UpdateUser-EditUser: ", err)
 		switch err.Error() {
 		case structs.ErrorDuplicateKey:
 			resp.
@@ -130,6 +135,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err = h.repo.GetUser("", nickname)
 	if err != nil {
+		fmt.Println("Error in UpdateUser-GetUser: ", err)
 		resp.
 			SetStatus(404).
 			SetContent(struct{

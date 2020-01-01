@@ -279,7 +279,7 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 		threads = append(threads, thread)
 	}
 	if len(threads) == 0 {
-		var sl string
+		var sl sql.NullString
 		err = r.DB.QueryRow(`SELECT slug from thread WHERE id=$1`, threadId).Scan(&sl)
 		if err != nil {
 			return threads, err

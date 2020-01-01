@@ -19,16 +19,18 @@ type Thread struct {
 func (t *Thread) InflateFromSql(row *sql.Row) error {
 	//	author, created, forum, id, message, slug, title, votes
 	var created time.Time
+	var slug sql.NullString
 	err :=  row.Scan(
 			&t.Author,
 			&created,
 			&t.Forum,
 			&t.Id,
 			&t.Message,
-			&t.Slug,
+			&slug,
 			&t.Title,
 			&t.Votes,
 		)
 	t.Created = created.Format(OutTimeFormat)
+	t.Slug = slug.String
 	return err
 }

@@ -11,11 +11,14 @@ type Forum struct {
 }
 func (f *Forum) InflateFromSql(row *sql.Row) error{
 	//	posts, threads, title, usernick
-	return row.Scan(
+	var slug sql.NullString
+	err := row.Scan(
 		&f.Posts,
 		&f.Threads,
 		&f.Title,
 		&f.User,
-		&f.Slug,
+		&slug,
 	)
+	f.Slug = slug.String
+	return err
 }

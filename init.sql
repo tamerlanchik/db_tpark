@@ -231,24 +231,10 @@ CREATE TRIGGER update_thread_vote AFTER INSERT OR UPDATE ON Vote
 
 
 CREATE OR REPLACE FUNCTION vote_thread(thread_ INTEGER, author_ citext, voice_ INTEGER) RETURNS void AS $update_thread_vote_counter$
-    DECLARE
-        currentVote SMALLINT;
     BEGIN
-        currentVote := (SELECT vote FROM Vote WHERE thread=thread_ AND lower(author)=lower(author_));
-
-        if currentVote IS NULL THEN
-            INSERT INTO Vote (thread, author, vote) VALUES (thread_, author_, voice_);
-        else
---             if currentVote*voice_<0 then --если нужно поменять запись
---                 UPDATE Vote SET vote=voice_ WHERE lower(thread)=lower(thread_) AND lower(author)=lower(author_);
---             end if;
-            UPDATE Vote SET vote=voice_ WHERE thread=thread_ AND lower(author)=lower(author_);
---         IF voice_>0 THEN
---             INSERT INTO Vote (thread, author) VALUES (thread_, author_);
---         ELSE
---             DELETE FROM Vote WHERE lower(thread)=lower(thread_) AND lower(author)=lower(author_);
---         end if;
-        end if;
+        INSERT INTO vote(thread, author, vote) VALUES (thread_, author_, voice_)
+                ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
+            UPDATE SET vote=voice_ WHERE vote.thread=thread_ AND lower(vote.author)=lower(author_);
     END
 $update_thread_vote_counter$ LANGUAGE plpgsql;
 
@@ -272,7 +258,9 @@ CREATE INDEX IF not exists thread_slug ON Thread (slug);
 CREATE INDEX IF NOT EXISTS thread_forum_created ON Thread (forum, created);
 CREATE INDEX IF not exists thread_author_forum ON Thread (author, forum);
 CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
-CREATE INDEX IF NOT EXISTS vote_nickname_thread ON Vote (author, thread);
+-- CREATE INDEX IF NOT EXISTS vote_nickname_thread ON Vote (author, thread);
+create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
+CREATE INDEX IF NOT EXISTS thread_id ON Thread(id);
 
 
 INSERT INTO Users (email, fullname, nickname, about) VALUES ('ivanov.vanya@mail.ry', 'Ian', 'tamerlanchik', 'About me');

@@ -112,27 +112,26 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 		params = append(params, limit)
 		placeholderLimit = `LIMIT $`+strconv.Itoa(len(params))
 	}
-	if counter==13{
-		//fmt.Println()
-	}
 	query = fmt.Sprintf(query, placeholderSince, placeholderDesc, placeholderLimit)
 	rows, err = r.DB.Query(query, params...)
 	if err != nil {
 		return threads, err
 	}
 
+	var created time.Time
+	var slug sql.NullString
 	for rows.Next(){
 		thread := structs.Thread{}
-		var created time.Time
-		err := rows.Scan(&thread.Author, &thread.Forum, &created, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+		err := rows.Scan(&thread.Author, &thread.Forum, &created, &thread.Id, &thread.Message, &slug, &thread.Title, &thread.Votes)
 		thread.Created = created.Format(structs.OutTimeFormat)
+		thread.Slug = slug.String
 		if err != nil {
 			return threads, err
 		}
 		threads = append(threads, thread)
 	}
 	if len(threads) == 0 {
-		var sl string
+		var sl sql.NullString
 		err = r.DB.QueryRow(`SELECT slug from Forum WHERE lower(slug)=lower($1)`, forumSlug).Scan(&sl)
 		if err != nil {
 			return threads, err
@@ -180,17 +179,18 @@ func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
 }
 
 func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int) error {
-	counter++
-	//fmt.Println(counter)
-	id, err := r.getThreadId(threadKey)
-	if err != nil {
-		return err
-	}
-	if counter==131{
-		//fmt.Println(counter)
+
+	var id int64
+	var ok bool
+	if id, ok = threadKey.(int64); !ok {
+		var err error
+		id, err = r.getThreadId(threadKey)
+		if err != nil {
+			return err
+		}
 	}
 	query := `SELECT vote_thread($1, $2, $3)`
-	_, err = r.DB.Exec(query, id, user, voice)
+	_, err := r.DB.Exec(query, id, user, voice)
 	return err
 }
 

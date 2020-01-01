@@ -4,6 +4,8 @@ import (
 
 	"db_tpark/repository"
 	"db_tpark/structs"
+	"fmt"
+
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
@@ -32,9 +34,9 @@ func (h *PostHandler) InflateRouter(r *mux.Router) {
 func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	GetPostCounter++
 	//fmt.Println("GetPostDetails", GetPostCounter)
-	if GetPostCounter>=18{
-		//fmt.Println("GetPostDetails")
-	}
+	//if GetPostCounter>=18{
+	//	//fmt.Println("GetPostDetails")
+	//}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
@@ -44,7 +46,7 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		fmt.Println("No such a param: ", "nick")
 		return
 	}
 	rel := r.URL.Query()["related"]
@@ -54,11 +56,12 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	}
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		//fmt.Println("Wrong param: ", "id")
+		fmt.Println("Wrong param: ", "id")
 		return
 	}
 	posts, err := h.repo.GetPostAccount(idInt, related)
 	if err != nil {
+		fmt.Println("Error in GetPostDetails: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}
@@ -84,28 +87,30 @@ func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		fmt.Println("No such a param: ", "nick")
 		return
 	}
 
 	var post structs.Post
 	err := HttpTools.StructFromBody(*r, &post)
 	if err != nil {
-		//fmt.Println("No such a param: ", "post")
+		fmt.Println("No such a param: ", "post")
 		return
 	}
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		//fmt.Println("Wrong param: ", "id")
+		fmt.Println("Wrong param: ", "id")
 		return
 	}
 	err = h.repo.EditPost(idInt, post)
 	if err != nil {
+		fmt.Println("Error in ChangePost-EdiPost: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}
 	post, err = h.repo.GetPost(idInt)
 	if err != nil {
+		fmt.Println("Error in ChangePost-GetPost: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}

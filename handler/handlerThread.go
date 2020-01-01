@@ -39,7 +39,7 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	idOrSlug, ok := args["id"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		fmt.Println("No such a param: ", "nick")
 		return
 	}
 
@@ -55,11 +55,12 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	var post []structs.Post
 	err := HttpTools.StructFromBody(*r, &post)
 	if err != nil {
-		//fmt.Println("Error struct got")
+		fmt.Println("Error struct got")
 		return
 	}
 	post, err = h.repo.CreatePost(threadId, post)
 	if err != nil {
+		fmt.Println("Error in CreatePost: ", err)
 		switch err.(structs.InternalError).E{
 		case structs.ErrorNoThread:
 			resp.SetStatus(404)
@@ -82,7 +83,7 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		//fmt.Println("No such a param: ", "id")
+		fmt.Println("No such a param: ", "id")
 		return
 	}
 	threadId, err := strconv.ParseInt(id, 10, 64)
@@ -96,6 +97,7 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
+		fmt.Println("Error in GetPostDetails: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
@@ -112,7 +114,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		//fmt.Println("No such a param: ", "id")
+		fmt.Println("No such a param: ", "id")
 		return
 	}
 
@@ -120,7 +122,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 
 	err := HttpTools.StructFromBody(*r, &thread)
 	if err != nil {
-		//fmt.Println("Invalid body")
+		fmt.Println("Invalid body")
 		return
 	}
 
@@ -137,6 +139,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	err = h.repo.EditThread(thread)
 
 	if err != nil {
+		fmt.Println("Error in UpdateThread-EditThread: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
@@ -147,6 +150,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		thread, err = h.repo.GetThreadById(int64(thread.Id))
 	}
 	if err != nil {
+		fmt.Println("Error in UpdateThread-GetThread ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
@@ -205,7 +209,7 @@ func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	threadKey, ok := args["id"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		fmt.Println("No such a param: ", "nick")
 		return
 	}
 	limit, _ := strconv.ParseInt(r.FormValue("limit"), 10, 64)
@@ -220,16 +224,12 @@ func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	posts, err := h.repo.GetPosts(threadKey, limit, since, sort, desc)
 	if err != nil{
-		//fmt.Println("Error in GetThreads: ", err, len(posts), threadKey)
+		fmt.Println("Error in GetPosts: ", err)
 		resp.
 			SetStatus(404).SetContent(structs.Error{Message:"Can-t fiтв forum with slug " + threadKey})
 		return
 	}
 	resp.SetStatus(200).SetContent(posts)
-
-}
-
-func Test() {
 
 }
 
