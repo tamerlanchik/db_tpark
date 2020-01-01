@@ -122,12 +122,83 @@ func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
 	return err
 }
 
+//func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]structs.Post, error) {
+//	postCounter++
+//	threadId, err := r.getThreadId(thread)
+//	if err != nil {
+//		return posts, structs.InternalError{E: structs.ErrorNoThread}
+//	}
+//
+//	var cnt int64;
+//	if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+//		return posts, structs.InternalError{E: structs.ErrorNoThread}
+//	}
+//	if len(posts) == 0 {
+//		return posts, nil
+//	}
+//
+//	query := `INSERT INTO Post (author, message, parent, thread) VALUES `
+//	postfix := `RETURNING forum, id, created`
+//
+//	if len(posts) == 1{
+//		query = query + `($1, $2, $3, $4) ` + postfix
+//	}else{
+//		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
+//	}
+//
+//	var params []interface{}
+//	for _, post := range posts {
+//		var parent sql.NullInt64;
+//		parent.Int64 = post.Parent;
+//		if post.Parent!=0 {
+//			parent.Valid = true;
+//		}
+//		params = append(params, post.Author, post.Message, parent, threadId)
+//	}
+//
+//
+//	rows, err := r.DB.Query(query, params...)
+//	if err != nil || (rows!=nil && rows.Err()!=nil){
+//		switch err.(*pgconn.PgError).Code {
+//		default:
+//			return posts, structs.InternalError{E:"Unknown error"}
+//		}
+//	}
+//	i := 0
+//	for rows.Next() {
+//		var created time.Time
+//		err := rows.Scan(&(posts[i].Forum), &(posts[i].Id), &(created))
+//		if err != nil {
+//			return posts, structs.InternalError{E: err.Error()}
+//		}
+//		posts[i].Created = created.Format(structs.OutTimeFormat)
+//		posts[i].IsEdited = false
+//		posts[i].Thread = int32(threadId)
+//		i++
+//	}
+//
+//	//var cnt int64;
+//	if i==0 && len(posts) > 0{
+//		// looking for exact error
+//		if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+//			return posts, structs.InternalError{E: structs.ErrorNoThread}
+//		} else if row:= r.DB.QueryRow(`SELECT COUNT(nickname) FROM Users WHERE nickname=$1`, posts[0].Author); row.Scan(&cnt)!=nil || cnt==0 {
+//			return posts, structs.InternalError{E: structs.ErrorNoThread}
+//
+//		}else{
+//			return posts, structs.InternalError{E:structs.ErrorNoParent}
+//		}
+//	}
+//	return posts, nil
+//}
+
 func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]structs.Post, error) {
 	postCounter++
 	threadId, err := r.getThreadId(thread)
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread}
 	}
+
 	var cnt int64;
 	if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
 		return posts, structs.InternalError{E: structs.ErrorNoThread}
@@ -135,49 +206,49 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	if len(posts) == 0 {
 		return posts, nil
 	}
-	query := `INSERT INTO Post (author, message, parent, thread) VALUES `
-	postfix := `RETURNING forum, id, created`
 
-	if len(posts) == 1{
-		query = query + `($1, $2, $3, $4) ` + postfix
-	}else{
-		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
-	}
+	query := `INSERT INTO Post (author, message, parent, thread, created)
+					VALUES ($1, $2, $3, $4, $5)
+				RETURNING forum, id`
 
-	var params []interface{}
-	for _, post := range posts {
-		var parent sql.NullInt64;
-		parent.Int64 = post.Parent;
-		if post.Parent!=0 {
-			parent.Valid = true;
+	var lastIndex int
+	var firstCreated time.Time
+	firstCreated = time.Now()
+	createdString := firstCreated.Format(structs.OutTimeFormat)
+	err = func() error {
+		for i, post := range posts {
+			var parent sql.NullInt64;
+			parent.Int64 = post.Parent;
+			if post.Parent != 0 {
+				parent.Valid = true;
+			}
+			row := r.DB.QueryRow(query, post.Author, post.Message, parent, threadId, firstCreated)
+			if err != nil {
+				switch err.(*pgconn.PgError).Code {
+				case "23514":
+					return structs.InternalError{E:structs.ErrorNoParent}
+				default:
+					return structs.InternalError{E: "Unknown error"}
+				}
+			}
+
+			err = row.Scan(&(posts[i].Forum), &(posts[i].Id))
+			if err != nil {
+				return structs.InternalError{E: err.Error()}
+			}
+			posts[i].Created = createdString
+			posts[i].IsEdited = false
+			posts[i].Thread = int32(threadId)
+			lastIndex++
 		}
-		params = append(params, post.Author, post.Message, parent, threadId)
-	}
+		return nil
+	}()
+	//if err != nil {
+	//	return posts, err
+	//}
 
 
-	rows, err := r.DB.Query(query, params...)
-	if err != nil || (rows!=nil && rows.Err()!=nil){
-		switch err.(*pgconn.PgError).Code {
-		default:
-			return posts, structs.InternalError{E:"Unknown error"}
-		}
-	}
-	i := 0
-	for rows.Next() {
-		var created time.Time
-		err := rows.Scan(&(posts[i].Forum), &(posts[i].Id), &(created))
-		if err != nil {
-			return posts, structs.InternalError{E: err.Error()}
-		}
-		posts[i].Created = created.Format(structs.OutTimeFormat)
-		posts[i].IsEdited = false
-		posts[i].Thread = int32(threadId)
-		i++
-	}
-
-	//var cnt int64;
-	if i==0 && len(posts) > 0{
-		// looking for exact error
+	if lastIndex==0 && len(posts) > 0 {
 		if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
 			return posts, structs.InternalError{E: structs.ErrorNoThread}
 		} else if row:= r.DB.QueryRow(`SELECT COUNT(nickname) FROM Users WHERE nickname=$1`, posts[0].Author); row.Scan(&cnt)!=nil || cnt==0 {

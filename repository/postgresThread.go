@@ -12,9 +12,12 @@ import (
 
 
 func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, error) {
-	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES ($1, (SELECT slug from Forum WHERE lower(slug)=lower($2)), $3, %s::timestamptz, $5, %s) RETURNING id, slug, votes, forum`
+	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES 
+					($1, 
+					(SELECT slug from Forum WHERE lower(slug)=lower($2)),
+					$3, COALESCE($4, NOW())::timestamptz, $5, NULLIF($6, ''))
+				RETURNING id, slug, 0, forum`
 
-	query = fmt.Sprintf(query, `COALESCE($4, NOW())`, `NULLIF($6, '')`)
 	var slug sql.NullString
 	t, _ := time.Parse(structs.OutTimeFormat, thread.Created)
 	err := r.DB.QueryRow(query, thread.Author, thread.Forum, thread.Message, t, thread.Title, thread.Slug).
@@ -45,21 +48,12 @@ func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, erro
 	return thread, err
 }
 
-func (r *PostgresRepo) GetThread(slug string) (structs.Thread, error) {
+func (r *PostgresRepo) getThreadById(id int64) (structs.Thread, error) {
 	var thread structs.Thread
-	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE lower(slug)=lower($1)`
-
-	var created time.Time
-	err := r.DB.QueryRow(query, slug).
-		Scan(&thread.Author, &created, &thread.Forum,
-			&thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
-	thread.Created = created.Format(structs.OutTimeFormat)
-	return thread, err
-}
-
-func (r *PostgresRepo) GetThreadById(id int64) (structs.Thread, error) {
-	var thread structs.Thread
-	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
+	//query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
+	query := `SELECT author, created, forum, id, message, slug, title, 
+				(SELECT votes FROM threadvotes WHERE threadvotes.thread=$1) 
+				FROM Thread WHERE id=$1`
 
 	var created time.Time
 	var slug sql.NullString
@@ -73,25 +67,19 @@ func (r *PostgresRepo) GetThreadById(id int64) (structs.Thread, error) {
 	return thread, err
 }
 
-func (r *PostgresRepo) GetThreadUnknownKey(key interface{}) (structs.Thread, error) {
-	var threadId int64
-	var ok bool
-	var err error
-	fmt.Println(key)
-	if threadId, ok = key.(int64); !ok {	// если передали не id
-		fmt.Println("Not id")
-		threadId, err = r.getThreadId(key)	// резолвим slug
-		if err != nil {
-			return structs.Thread{}, err
-		}
+func (r *PostgresRepo) GetThread(key interface{}) (structs.Thread, error) {
+	threadId, err := r.getThreadId(key)	// резолвим slug
+	if err != nil {
+		return structs.Thread{}, err
 	}
-	return r.GetThreadById(threadId)
+	return r.getThreadById(threadId)
 }
 
 func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error) {
 	counter++
 	threads := make([]structs.Thread, 0)
-	query := `SELECT author, forum, created, id, message, slug, title, votes FROM Thread WHERE lower(forum)=lower($1) %s ORDER BY created %s %s`
+	query := `SELECT author, forum, created, id, message, slug, title, tv.votes FROM Thread 
+					JOIN ThreadVotes as tv on tv.thread=id WHERE lower(forum)=lower($1) %s ORDER BY created %s %s`
 
 	var rows *sql.Rows
 	var err error
@@ -204,7 +192,7 @@ func (r *PostgresRepo) getThreadId(threadKey interface{}) (int64, error) {
 	if threadId, err := strconv.ParseInt(threadKey.(string), 10, 64); err == nil {
 		return threadId, nil
 	}
-	err := r.DB.QueryRow(`SELECT * FROM get_thread_id_by_slug($1)`, threadKey.(string)).Scan(&threadId)
+	err := r.DB.QueryRow(`SELECT id FROM Thread WHERE lower(slug)=lower($1)`, threadKey.(string)).Scan(&threadId)
 	//queryGetThreadId := `SELECT id FROM Thread WHERE lower(slug)=lower($1);`
 	//err := r.DB.QueryRow(queryGetThreadId, threadKey.(string)).Scan(&threadId)
 	if err != nil {
@@ -212,3 +200,4 @@ func (r *PostgresRepo) getThreadId(threadKey interface{}) (int64, error) {
 	}
 	return threadId, nil
 }
+

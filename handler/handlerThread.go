@@ -68,6 +68,8 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		case structs.ErrorNoParent:
 			resp.SetStatus(409)
 			break
+		default:
+			resp.SetStatus(409)
 		}
 		resp.SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
@@ -91,7 +93,7 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 
 	var thread structs.Thread
 	if err == nil {
-		thread, err = h.repo.GetThreadById(threadId)
+		thread, err = h.repo.GetThread(threadId)
 	} else {
 		thread, err = h.repo.GetThread(id)
 	}
@@ -147,7 +149,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	if thread.Slug != ""{
 		thread, err = h.repo.GetThread(thread.Slug)
 	}else{
-		thread, err = h.repo.GetThreadById(int64(thread.Id))
+		thread, err = h.repo.GetThread(int64(thread.Id))
 	}
 	if err != nil {
 		fmt.Println("Error in UpdateThread-GetThread ", err)
@@ -191,7 +193,7 @@ func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
-	thread, err := h.repo.GetThreadUnknownKey(id)
+	thread, err := h.repo.GetThread(id)
 	if err != nil {
 		fmt.Println("Error in Vote: cannot get thread: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})

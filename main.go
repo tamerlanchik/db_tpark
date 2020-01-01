@@ -33,10 +33,10 @@ func main() {
 		w.Write([]byte("This is a catch-all route"))
 		//fmt.Println("FF", r.URL)
 	})
-	loggedRouter := AddContentTypeMiddleware()(mainRouter)
-	http.Handle("/", loggedRouter)
+	//loggedRouter := AddContentTypeMiddleware()(mainRouter)
+	//http.Handle("/", loggedRouter)
 	//fmt.Println("Prestart server")
-	err := http.ListenAndServe(":"+port, loggedRouter)
+	err := http.ListenAndServe(":"+port, mainRouter)
 	fmt.Println("Stop server: ", err)
 }
 

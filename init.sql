@@ -49,6 +49,11 @@ CREATE TABLE Thread (
     title TEXT NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );
+
+create table ThreadVotes (
+    thread BIGINT REFERENCES Thread(id) NOT NULL,
+    votes INTEGER NOT NULL DEFAULT 0
+);
 CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 
 -- _______Post___________
@@ -186,14 +191,14 @@ CREATE TRIGGER post_path BEFORE INSERT ON Post
 -- Триггер на Thread-ы. Отвечает за счетчик в Forums и const-поля
 CREATE OR REPLACE FUNCTION update_forum_threads() RETURNS trigger AS $update_forum_threads$
     BEGIN
-        RAISE NOTICE 'forum.threads to update';
         IF TG_OP='INSERT' THEN
             UPDATE Forum SET threads=threads+1 WHERE slug=NEW.forum;
+            INSERT INTO ThreadVotes(thread, votes) VALUES (NEW.id, 0);
             RETURN NEW;
         ELSIF TG_OP='DELETE' OR TG_OP='TRUNCATE' THEN
             UPDATE Forum SET threads=threads-1 WHERE slug=OLD.forum;
             RETURN OLD;
-        ELSE
+        ELSE    -- Update
             IF NEW.forum!=OLD.forum THEN
                 RAISE EXCEPTION 'const .forum';
             END IF;
@@ -215,10 +220,12 @@ CREATE TRIGGER update_forum_threads AFTER UPDATE OR INSERT OR DELETE ON Thread
 CREATE OR REPLACE FUNCTION update_thread_vote_counter() RETURNS trigger AS $update_thread_vote_counter$
     BEGIN
         IF TG_OP='INSERT' THEN
-            UPDATE Thread SET votes=votes+NEW.vote WHERE id=NEW.thread;
+--             UPDATE Thread SET votes=votes+NEW.vote WHERE id=NEW.thread;
+            UPDATE ThreadVotes SET votes=votes+NEW.vote WHERE thread=NEW.thread;
             RETURN NEW;
         ELSIF TG_OP='UPDATE' THEN
-            UPDATE Thread SET votes=votes+(NEW.vote-OLD.vote) WHERE id=NEW.thread;
+--             UPDATE Thread SET votes=votes+(NEW.vote-OLD.vote) WHERE id=NEW.thread;
+            UPDATE ThreadVotes SET votes=votes+(NEW.vote-OLD.vote) WHERE thread=NEW.thread;
             RETURN NEW;
         ELSE
             RAISE EXCEPTION 'Invalid call update_thread_vote_counter()';
@@ -253,14 +260,13 @@ CREATE INDEX IF NOT EXISTS post_thread ON Post (thread);
 CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
 CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
 CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
+create index IF NOT EXISTS post_forum_author ON post(forum, author);
 CREATE INDEX IF NOT EXISTS idx_sth ON Post (lower(author));
-CREATE INDEX IF not exists thread_slug ON Thread (slug);
-CREATE INDEX IF NOT EXISTS thread_forum_created ON Thread (forum, created);
-CREATE INDEX IF not exists thread_author_forum ON Thread (author, forum);
+
 CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
--- CREATE INDEX IF NOT EXISTS vote_nickname_thread ON Vote (author, thread);
+create index IF NOT EXISTS thread_forum ON thread(forum);
 create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
-CREATE INDEX IF NOT EXISTS thread_id ON Thread(id);
+create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
 
 
 INSERT INTO Users (email, fullname, nickname, about) VALUES ('ivanov.vanya@mail.ry', 'Ian', 'tamerlanchik', 'About me');
