@@ -23,7 +23,7 @@ const (
 
 func main() {
 	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
-	runtime.GOMAXPROCS(6)
+	//runtime.GOMAXPROCS(6)
 	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
 	if err:= InflateRouter(mainRouter); err !=nil {
 		//fmt.Println("Error inflating router:", err)
