@@ -28,7 +28,7 @@ type TimeLogger struct{
 }
 
 func (l *TimeLogger) Write(path string, val time.Time) {
-	t := time.Since(val).Milliseconds()
+	t := int64(time.Since(val)) / 1e6
 	l.mutex.Lock()
 	l.data[path] = append(l.data[path], t)
 	l.mutex.Unlock()
