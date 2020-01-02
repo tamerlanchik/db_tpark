@@ -5,6 +5,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"time"
 
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
@@ -32,6 +33,8 @@ func (h *PostHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/post/getDetails", tic)
 	GetPostCounter++
 	//fmt.Println("GetPostDetails", GetPostCounter)
 	//if GetPostCounter>=18{
@@ -73,6 +76,8 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/post/change", tic)
 	EditPostCounter++
 	//fmt.Println("Edit post", EditPostCounter)
 	if EditPostCounter>=3 {

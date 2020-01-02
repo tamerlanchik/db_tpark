@@ -4,6 +4,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"sync"
 
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
@@ -16,6 +17,52 @@ import (
 type ForumHandler struct {
 	repo repository.Repository
 }
+
+func init() {
+	timeLogger.Init()
+}
+
+type TimeLogger struct{
+	data map[string][]int64
+	mutex sync.Mutex
+}
+
+func (l *TimeLogger) Write(path string, val time.Time) {
+	t := time.Since(val).Milliseconds()
+	l.mutex.Lock()
+	l.data[path] = append(l.data[path], t)
+	l.mutex.Unlock()
+}
+
+func (l *TimeLogger) Init() {
+	l.data = make(map[string][]int64)
+}
+
+func PrintMetrics() {
+	d := timeLogger
+	//fmt.Println(d.data)
+	for path, times := range d.data {
+		fmt.Println(path)
+		list := make([]int64, 0)
+		for _, elem := range times{
+			if elem > 5 {
+				list = append(list, elem)
+			}
+		}
+		fmt.Println(list)
+		fmt.Printf("Avr: %d\n", func() int64 {
+			var res int64
+			for _, val := range times {
+				res += val
+			}
+			res = res/int64(len(times))
+			return res
+		}())
+	}
+}
+
+var timeLogger TimeLogger
+
 
 func NewForumHandler(repo repository.Repository) *ForumHandler {
 	return &ForumHandler{repo: repo}
@@ -30,6 +77,8 @@ func (h *ForumHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/forum/create", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -62,6 +111,8 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/thread/create", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -112,6 +163,8 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/forum/details", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -135,6 +188,8 @@ func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/forum/threads", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -160,6 +215,8 @@ func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/forum/users", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 

@@ -6,23 +6,20 @@
 --     fullname TEXT NOT NULL DEFAULT '',
 --     nickname CITEXT COLLATE "English_United States.1252" CONSTRAINT nick_right CHECK(nickname'^[A-Za-z0-9]*$') UNIQUE
 -- );
-CREATE EXTENSION citext;
+CREATE EXTENSION IF NOT EXISTS citext;
+DROP TABLE If EXISTS ThreadVotes;
 DROP TABLE IF EXISTS Vote;
 DROP TABLE IF EXISTS Post;
 DROP TABLE IF EXISTS Thread;
 DROP TABLE IF EXISTS Forum;
 DROP TABLE IF EXISTS Users;
 
-
--- _______Users________
 CREATE TABLE Users (
     about TEXT NOT NULL DEFAULT '',
     email CITEXT NOT NULL UNIQUE CONSTRAINT email_right CHECK(email ~ '^.*@[A-Za-z0-9\-_\.]*$'),
     fullname TEXT NOT NULL DEFAULT '',
---     nickname CITEXT COLLATE pg_catalog."en-US-x-icu" PRIMARY KEY CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$')
     nickname CITEXT COLLATE "POSIX" PRIMARY KEY CONSTRAINT nick_right CHECK(nickname ~ '^[A-Za-z0-9_\.]*$')
 );
-CREATE UNIQUE INDEX users_nickname_index on Users (LOWER(nickname));
 
 -- _________Forum____________
 CREATE TABLE Forum (
@@ -32,13 +29,8 @@ CREATE TABLE Forum (
     title TEXT NOT NULL DEFAULT '',
     userNick CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL
 );
-CREATE UNIQUE INDEX forum_slug_index on Forum (LOWER(slug));
 
 -- _______Thread__________
-
--- CREATE OR REPLACE FUNCTION slug_thread() RETURNS TEXT LANGUAGE SQL AS
--- $$ SELECT array_to_string(array(select substr('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789-_',((random()*(62-1)+1)::integer),1) from generate_series(1,10)),'') $$;
-
 CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -54,7 +46,6 @@ create table ThreadVotes (
     thread BIGINT REFERENCES Thread(id) NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );
-CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 
 -- _______Post___________
 CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $get_post_thread$
@@ -76,8 +67,8 @@ CREATE TABLE Post (
     path bigint[] not null
 );
 
-
-CREATE TABLE vote (
+-- ______Vote______
+CREATE TABLE Vote (
     thread BIGINT REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE CASCADE,
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     vote SMALLINT CONSTRAINT check_vote CHECK (vote>=-1 AND vote <=1 ) DEFAULT 0,
@@ -105,7 +96,8 @@ DROP TRIGGER IF EXISTS user_readonly ON Users;
 CREATE TRIGGER user_readonly BEFORE UPDATE ON Users
     FOR EACH ROW EXECUTE PROCEDURE user_readonly();
 
--- Триггер на Forum
+-- Заменяет переданное (возможно, со сбитым регистром)
+-- имя пользователя соответствующим в БД
 CREATE OR REPLACE FUNCTION forum_user() RETURNS trigger AS $forum_user$
     BEGIN
         NEW.userNick = (SELECT nickname FROM Users WHERE lower(nickname)=lower(NEW.usernick));
@@ -164,16 +156,7 @@ DROP TRIGGER IF EXISTS update_forum_posts ON Post;
 CREATE TRIGGER update_forum_posts BEFORE UPDATE OR INSERT OR DELETE ON Post
     FOR EACH ROW EXECUTE PROCEDURE update_forum_posts();
 
-CREATE OR REPLACE FUNCTION forum_user() RETURNS trigger AS $forum_user$
-    BEGIN
-        NEW.userNick = (SELECT nickname FROM Users WHERE lower(nickname)=lower(NEW.usernick));
-        RETURN NEW;
-    END
-$forum_user$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS forum_user ON Forum;
-CREATE TRIGGER forum_user BEFORE INSERT ON Forum
-    FOR EACH ROW EXECUTE PROCEDURE forum_user();
-
+-- Триггер на Post. Выставляет путь
 CREATE OR REPLACE FUNCTION post_path() RETURNS TRIGGER AS
 $post_path$
 BEGIN
@@ -183,10 +166,8 @@ BEGIN
     end if;
 END;
 $post_path$ LANGUAGE plpgsql;
-
 CREATE TRIGGER post_path BEFORE INSERT ON Post
     FOR EACH ROW EXECUTE PROCEDURE post_path();
-
 
 -- Триггер на Thread-ы. Отвечает за счетчик в Forums и const-поля
 CREATE OR REPLACE FUNCTION update_forum_threads() RETURNS trigger AS $update_forum_threads$
@@ -197,8 +178,9 @@ CREATE OR REPLACE FUNCTION update_forum_threads() RETURNS trigger AS $update_for
             RETURN NEW;
         ELSIF TG_OP='DELETE' OR TG_OP='TRUNCATE' THEN
             UPDATE Forum SET threads=threads-1 WHERE slug=OLD.forum;
+            DELETE FROM ThreadVotes WHERE NEW.id=thread;
             RETURN OLD;
-        ELSE    -- Update
+        ELSIF TG_OP='UPDATE' THEN
             IF NEW.forum!=OLD.forum THEN
                 RAISE EXCEPTION 'const .forum';
             END IF;
@@ -210,13 +192,14 @@ CREATE OR REPLACE FUNCTION update_forum_threads() RETURNS trigger AS $update_for
             END IF;
             RETURN NEW;
         END IF;
+        RETURN NEW;
     END
 $update_forum_threads$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_forum_threads ON Thread;
 CREATE TRIGGER update_forum_threads AFTER UPDATE OR INSERT OR DELETE ON Thread
     FOR EACH ROW EXECUTE PROCEDURE update_forum_threads();
 
--- Триггер на Vote-ы. Отвечает за счетчики votes у Thread-ов.
+-- Триггер на Vote. Отвечает за счетчики votes у Thread-ов.
 CREATE OR REPLACE FUNCTION update_thread_vote_counter() RETURNS trigger AS $update_thread_vote_counter$
     BEGIN
         IF TG_OP='INSERT' THEN
@@ -237,13 +220,13 @@ CREATE TRIGGER update_thread_vote AFTER INSERT OR UPDATE ON Vote
     FOR EACH ROW EXECUTE PROCEDURE update_thread_vote_counter();
 
 
-CREATE OR REPLACE FUNCTION vote_thread(thread_ INTEGER, author_ citext, voice_ INTEGER) RETURNS void AS $update_thread_vote_counter$
-    BEGIN
-        INSERT INTO vote(thread, author, vote) VALUES (thread_, author_, voice_)
-                ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
-            UPDATE SET vote=voice_ WHERE vote.thread=thread_ AND lower(vote.author)=lower(author_);
-    END
-$update_thread_vote_counter$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION vote_thread(thread_ INTEGER, author_ citext, voice_ INTEGER) RETURNS void AS $update_thread_vote_counter$
+--     BEGIN
+--         INSERT INTO vote(thread, author, vote) VALUES (thread_, author_, voice_)
+--                 ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
+--             UPDATE SET vote=voice_ WHERE vote.thread=thread_ AND lower(vote.author)=lower(author_);
+--     END
+-- $update_thread_vote_counter$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION get_thread_id_by_slug(slugArg citext) RETURNS INTEGER AS $get_thread_id_by_slug$
@@ -252,17 +235,21 @@ CREATE OR REPLACE FUNCTION get_thread_id_by_slug(slugArg citext) RETURNS INTEGER
     END
 $get_thread_id_by_slug$ LANGUAGE plpgsql;
 
-CREATE INDEX IF NOT EXISTS post_path_id ON Post (id, (path[1]));
-CREATE INDEX IF NOT EXISTS post_path ON Post (path);
-CREATE INDEX IF NOT EXISTS post_path_1 ON Post ((path[1]));
-CREATE INDEX IF NOT EXISTS post_thread_id ON Post (thread, id);
-CREATE INDEX IF NOT EXISTS post_thread ON Post (thread);
-CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
-CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
-CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
+CREATE UNIQUE INDEX users_nickname_index on Users (LOWER(nickname));
+CREATE UNIQUE INDEX forum_slug_index on Forum (LOWER(slug));
+-- CREATE INDEX IF NOT EXISTS post_path_id ON Post (id, (path[1]));
+-- CREATE INDEX IF NOT EXISTS post_path ON Post (path);
+-- CREATE INDEX IF NOT EXISTS post_path_1 ON Post ((path[1]));
+-- CREATE INDEX IF NOT EXISTS post_thread_id ON Post (thread, id);
+-- CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
+-- CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
+-- CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
+create index post__thread ON Post(thread);
+create index post__path__first ON Post((path[1]));
 create index IF NOT EXISTS post_forum_author ON post(forum, author);
 CREATE INDEX IF NOT EXISTS idx_sth ON Post (lower(author));
 
+CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
 create index IF NOT EXISTS thread_forum ON thread(forum);
 create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);

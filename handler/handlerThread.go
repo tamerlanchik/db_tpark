@@ -4,6 +4,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"time"
 
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
@@ -33,6 +34,8 @@ func(h *ThreadHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/post/create", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -79,6 +82,8 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/thread/details", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -108,6 +113,8 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/thread/update", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
@@ -161,6 +168,9 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/thread/vote", tic)
+	start := time.Now()
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -187,12 +197,14 @@ func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("Begin: ", time.Since(start))
 	err = h.repo.VoteThread(id, req.Nickname, req.Voice)
 	if err != nil {
 		fmt.Println("Error in Vote: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
+	fmt.Println("Vote done: ", time.Since(start))
 	thread, err := h.repo.GetThread(id)
 	if err != nil {
 		fmt.Println("Error in Vote: cannot get thread: ", err)
@@ -200,9 +212,12 @@ func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp.SetStatus(200).SetContent(thread)
+	fmt.Println("End: ", time.Since(start))
 }
 
 func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/thread/getPosts", tic)
 	counter++
 	//fmt.Println(counter)
 	resp := HttpTools.NewResponse(w)

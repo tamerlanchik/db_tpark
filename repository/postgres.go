@@ -15,7 +15,8 @@ const (
 	queryGetUserByNick=`SELECT email, nickname, fullname, about FROM Users WHERE nickname=$1`
 	queryGetPost=`SELECT author, created, forum, id, isEdited, message, coalesce(parent,0), thread FROM Post WHERE id=$1`
 	queryGetForum = `SELECT posts, threads, title, usernick, slug FROM Forum WHERE slug=$1`
-	queryGetThread=`SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
+	queryGetThread=`SELECT author, created, forum, id, message, slug, title, tv.votes FROM Thread 
+					JOIN ThreadVotes as tv on tv.thread=id WHERE lower(forum)=lower($1) WHERE id=$1`
 )
 
 func NewPostgresRepo() *PostgresRepo {

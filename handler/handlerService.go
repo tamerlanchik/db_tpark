@@ -4,6 +4,7 @@ import (
 	"db_tpark/pkg/HttpTools"
 	"db_tpark/repository"
 	"fmt"
+	"time"
 
 	//"fmt"
 	"github.com/gorilla/mux"
@@ -24,10 +25,14 @@ func(h *ServiceHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ServiceHandler) ClearAll(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/service/clearAll", tic)
 	h.repo.ClearAll()
 }
 
 func (h *ServiceHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/service/status", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 

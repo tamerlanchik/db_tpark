@@ -7,15 +7,7 @@ import (
 	pg "github.com/jackc/pgconn"
 )
 
-func (r *PostgresRepo) CreateAndReturnForum(slug, title, user string) (structs.Forum, error) {
-	query := `INSERT INTO Forum (slug, title, usernick) VALUES ($1, $2, $3)
-				RETURNING posts, threads, title, slug, usernick;`
-
-	var forum structs.Forum
-	err := r.DB.QueryRow(query, slug, title, user).Scan(&forum.Posts, &forum.Threads, &forum.Title, &forum.Slug, &forum.User)
-	return forum, err
-}
-
+// вызывается мало, работает быстро
 func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 	query := `INSERT INTO Forum (slug, title, usernick) VALUES ($1, $2, $3);`
 
@@ -36,6 +28,7 @@ func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 	return err
 }
 
+// работает быстро
 func (r *PostgresRepo) GetForum(slug string) (structs.Forum, error) {
 	query := `SELECT posts, threads, title, usernick, slug FROM Forum WHERE lower(slug)=lower($1);`
 

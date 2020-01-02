@@ -51,7 +51,12 @@ RUN /etc/init.d/postgresql start &&\
 #RUN  echo 'local all docker trust' | cat - /etc/postgresql/$PGVER/main/pg_hba.conf > /etc/postgresql/$PGVER/main/pg_hba.conf.bak && mv /etc/postgresql/$PGVER/main/pg_hba.conf.bak /etc/postgresql/$PGVER/main/pg_hba.conf
 
 # And add ``listen_addresses`` to ``/etc/postgresql/$PGVER/main/postgresql.conf``
-RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "fsync = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "synchronous_commit = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+
 
 
 # Expose the PostgreSQL port

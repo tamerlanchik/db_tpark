@@ -5,6 +5,7 @@ import (
 	"db_tpark/repository"
 	"fmt"
 	"runtime"
+	"time"
 
 	//"fmt"
 	"github.com/gorilla/mux"
@@ -22,6 +23,7 @@ const (
 
 func main() {
 	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
+	runtime.GOMAXPROCS(6)
 	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
 	if err:= InflateRouter(mainRouter); err !=nil {
 		//fmt.Println("Error inflating router:", err)
@@ -42,7 +44,7 @@ func main() {
 
 func InflateRouter(r *mux.Router) error {
 
-	//r.Use(AddContentTypeMiddleware())
+	r.Use(AddContentTypeMiddleware())
 
 
 
@@ -68,6 +70,10 @@ func InflateRouter(r *mux.Router) error {
 	userRouter := r.PathPrefix("/user").Subrouter()
 	handler.NewUserHandler(repo).InflateRouter(userRouter)
 
+	r.HandleFunc("/metrics", func(writer http.ResponseWriter, request *http.Request) {
+		handler.PrintMetrics()
+	})
+
 
 	return nil
 }
@@ -76,7 +82,9 @@ func AddContentTypeMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Path: ", r.URL)
+			start := time.Now()
 			next.ServeHTTP(w, r)
+			fmt.Println(r.URL, " ", time.Since(start))
 		})
 
 	}

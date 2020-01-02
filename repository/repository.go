@@ -8,7 +8,6 @@ type Repository interface{
 	EditUser(user structs.User) error
 
 	CreateForum(slug, title, user string) error
-	CreateAndReturnForum(slug, title, user string) (structs.Forum, error)
 	GetForum(slug string) (structs.Forum, error)
 
 	CreateThread(thread structs.Thread) (structs.Thread, error)

@@ -4,6 +4,7 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"time"
 
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
@@ -26,6 +27,8 @@ func(h *UserHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/user/create", tic)
 	//fmt.Println("CreateUser: prestart")
 	resp := HttpTools.NewResponse(w)
 	//fmt.Println("CreateUser: resp", resp)
@@ -50,12 +53,11 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	err = h.repo.AddUser(user)
 	//fmt.Println("CreateUser: after-repo")
 	if err == nil {
-		fmt.Println("Error in CreateUser-AddUser: ", err)
 		resp.SetStatus(201).SetContent(user)
 		return
 	} else {
 		var ans []structs.User
-
+		fmt.Println("Error in CreateUser-AddUser: ", err)
 		existUserByEmail, err := h.repo.GetUser(user.Email, "")
 		if err == nil {
 			fmt.Println("Error in CreateUser-GetUser: ", err)
@@ -72,6 +74,8 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/user/get", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
@@ -96,6 +100,8 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	tic := time.Now()
+	defer timeLogger.Write("/user/update", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
