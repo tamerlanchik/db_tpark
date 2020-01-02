@@ -56,6 +56,10 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf &
     echo "synchronous_commit = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
     echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
     echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "shared_buffers = 4000Mb" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "effective_cache_size = 10000Mb" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "work_mem = 10Mb" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "wal_buffers = 1gMb" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
 
 
 
