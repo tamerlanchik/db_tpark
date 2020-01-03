@@ -9,13 +9,31 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-//func init() {
-//	UsersForum = make(map[string][]string)
-//}
+func init() {
+	mutexMap = make(map[string]*sync.Mutex)
+	mutexMapMutex = sync.Mutex{}
+}
+
+func GetMutex(key string) {
+	mutex, ok := mutexMap[key]
+	if !ok {
+		mutex = &sync.Mutex{}
+		mutexMapMutex.Lock()
+		mutexMap[key]=mutex
+		mutexMapMutex.Unlock()
+	}
+	mutex.Lock()
+}
+func FreeMutex(key string) {
+	mutexMap[key].Unlock()
+}
 var postCounter int64
+var mutexMap map[string]*sync.Mutex
+var mutexMapMutex sync.Mutex
 //var UsersForum map[string][]string
 func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	query := queryGetPost
@@ -163,7 +181,8 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
-
+	GetMutex(forumSlug)
+	defer FreeMutex(forumSlug)
 	prefix := `INSERT INTO UsersInForum(nickname, forum) VALUES `
 	postfix := `ON CONFLICT DO NOTHING`
 	query = sqlTools.CreatePacketQuery(prefix, 2, len(userList), postfix)
