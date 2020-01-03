@@ -102,8 +102,8 @@ drop trigger if exists users_forum on Thread;
 drop trigger if exists users_forum on Post;
 create trigger users_forum_thread after insert on Thread
     for each row  execute procedure users_forum();
-create trigger users_forum_post after insert on Post
-    for each row  execute procedure users_forum();
+-- create trigger users_forum_post after insert on Post
+--     for each row  execute procedure users_forum();
 
 CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $get_post_thread$
     BEGIN

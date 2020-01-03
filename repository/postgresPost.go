@@ -11,7 +11,12 @@ import (
 	"strings"
 	"time"
 )
+
+func init() {
+	UsersForum = make(map[string][]string)
+}
 var postCounter int64
+var UsersForum map[string][]string
 func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	query := queryGetPost
 	var post structs.Post
@@ -138,6 +143,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		return posts, err
 	}
 
+	userList := make(map[string]bool)
 	postPacketSize := 30
 	firstCreated := time.Now()
 	for i:=0; i<len(posts); i+=postPacketSize {
@@ -148,12 +154,25 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		}
 		for j, post := range currentPacket{
 			posts[i+j] = post
+			userList[post.Author] = true
 		}
 	}
 
 	query := `UPDATE ForumPosts SET posts=posts+$2 WHERE forum=$1;`
 	_, err = r.DB.Exec(query, forumSlug, len(posts))
-	return posts, nil
+	if err != nil {
+		return posts, err
+	}
+
+	prefix := `INSERT INTO UsersInForum(nickname, forum) VALUES `
+	postfix := `ON CONFLICT DO NOTHING`
+	query = sqlTools.CreatePacketQuery(prefix, 2, len(userList), postfix)
+	params := make([]interface{}, 0, len(userList))
+	for key := range userList {
+		params = append(params, key, forumSlug)
+	}
+	_, err = r.DB.Exec(query, params...)
+	return posts, err
 }
 
 func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, posts []structs.Post, created time.Time) ([]structs.Post, error) {
