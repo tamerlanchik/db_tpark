@@ -140,7 +140,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	var forumSlug string
 	err = r.DB.QueryRow(`SELECT forum FROM Thread WHERE Thread.id=$1`, threadId).Scan(&forumSlug)
 	if err!=nil {
-		return posts, err
+		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
 
 	userList := make(map[string]bool)
@@ -161,7 +161,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	query := `UPDATE ForumPosts SET posts=posts+$2 WHERE forum=$1;`
 	_, err = r.DB.Exec(query, forumSlug, len(posts))
 	if err != nil {
-		return posts, err
+		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
 
 	prefix := `INSERT INTO UsersInForum(nickname, forum) VALUES `
@@ -172,7 +172,10 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		params = append(params, key, forumSlug)
 	}
 	_, err = r.DB.Exec(query, params...)
-	return posts, err
+	if err != nil {
+		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
+	}
+	return posts, nil
 }
 
 func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, posts []structs.Post, created time.Time) ([]structs.Post, error) {
