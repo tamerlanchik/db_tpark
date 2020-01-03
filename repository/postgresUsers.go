@@ -59,11 +59,18 @@ func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, des
 	counter++
 	//buildmode.Log.Println(counter)
 	users := make([]structs.User, 0)
-	query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
-				(SELECT DISTINCT author FROM Thread WHERE forum=$1)
-				UNION
-				(SELECT DISTINCT author FROM Post WHERE forum=$1)
-				) %s ORDER BY nickname %s %s;`
+	//query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
+	//			(SELECT DISTINCT author FROM Thread WHERE forum=$1)
+	//			UNION
+	//			(SELECT DISTINCT author FROM Post WHERE forum=$1)
+	//			) %s ORDER BY nickname %s %s;`
+	//
+	//query = `SELECT nickname from UsersInForum WHERE forum=$1
+	//			%s ORDER BY nickname %s %s;`
+
+	query := `SELECT about, email, fullname, nickname FROM Users
+				JOIN (SELECT nickname from UsersInForum WHERE forum=$1 %s) as l
+					USING (nickname) ORDER BY nickname %s %s`
 	var cmpPlaceholder, limitPlaceholder, orderPlaceholder string
 	paramsCount := 1
 	params := make([]interface{}, 0)

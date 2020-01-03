@@ -35,7 +35,7 @@ func PrintMetrics() {
 				list = append(list, elem)
 			}
 		}
-		buildmode.Log.Println(list)
+		fmt.Println(list)
 		fmt.Printf("Avr: %d\n", func() int64 {
 			var res int64
 			for _, val := range times {

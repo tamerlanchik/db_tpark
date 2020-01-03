@@ -23,6 +23,7 @@ const (
 
 
 func main() {
+	buildmode.LogTag = "no"
 	buildmode.Log.Println("Start server ", runtime.GOMAXPROCS(0))
 	//runtime.GOMAXPROCS(6)
 	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()

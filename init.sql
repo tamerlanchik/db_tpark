@@ -7,6 +7,7 @@
 --     nickname CITEXT COLLATE "English_United States.1252" CONSTRAINT nick_right CHECK(nickname'^[A-Za-z0-9]*$') UNIQUE
 -- );
 CREATE EXTENSION IF NOT EXISTS citext;
+DROP TABLE If EXISTS UsersInForum;
 DROP TABLE If EXISTS ThreadVotes;
 DROP TABLE IF EXISTS Vote;
 DROP TABLE IF EXISTS Post;
@@ -23,7 +24,7 @@ CREATE TABLE Users (
 
 -- _________Forum____________
 CREATE TABLE Forum (
-    posts BIGINT CONSTRAINT non_negative_posts_count CHECK (posts>=0) NOT NULL DEFAULT 0,  --autoincrement
+    posts INTEGER CONSTRAINT non_negative_posts_count CHECK (posts>=0) NOT NULL DEFAULT 0,  --autoincrement
     slug CITEXT PRIMARY KEY UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
     threads INTEGER CONSTRAINT non_negative_threads_count CHECK (threads>=0) DEFAULT 0,
     title TEXT NOT NULL DEFAULT '',
@@ -35,7 +36,7 @@ CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     forum CITEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
-    id BIGSERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     message TEXT NOT NULL,
     slug CITEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
     title TEXT NOT NULL,
@@ -43,7 +44,7 @@ CREATE TABLE Thread (
 );
 
 create table ThreadVotes (
-    thread BIGINT NOT NULL,
+    thread INTEGER NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );
 
@@ -58,22 +59,46 @@ CREATE TABLE Post (
     author CITEXT REFERENCES Users (nickname) NOT NULL,
     created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     forum CITEXT,
-    id BIGSERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     isEdited BOOLEAN NOT NULL DEFAULT false,
     message TEXT NOT NULL DEFAULT '',
-    parent BIGINT REFERENCES Post (id) ON DELETE CASCADE ON UPDATE RESTRICT
+    parent INTEGER REFERENCES Post (id) ON DELETE CASCADE ON UPDATE RESTRICT
         CONSTRAINT par CHECK (get_thread_by_post(parent)=thread),
     thread INTEGER,
-    path bigint[] not null
+    path INTEGER[] not null
 );
 
 -- ______Vote______
 CREATE TABLE Vote (
-    thread BIGINT,
+    thread INTEGER,
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     vote SMALLINT DEFAULT 0,
     UNIQUE (thread, author)
 );
+
+
+create table UsersInForum (
+    nickname CITEXT COLLATE "POSIX",
+    forum citext,
+    unique (nickname, forum)
+);
+
+create or replace function users_forum() returns trigger as $users_forum$
+    begin
+        if NEW.forum IS NOT NULL then
+            INSERT INTO usersinforum(forum, nickname) VALUES (NEW.forum, new.author) on conflict do nothing;
+        end if;
+        RETURN new;
+    end;
+$users_forum$ language plpgsql;
+drop trigger if exists users_forum_thread on Thread;
+drop trigger if exists users_forum_post on Post;
+drop trigger if exists users_forum on Thread;
+drop trigger if exists users_forum on Post;
+create trigger users_forum_thread after insert on Thread
+    for each row  execute procedure users_forum();
+create trigger users_forum_post after insert on Post
+    for each row  execute procedure users_forum();
 
 CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $get_post_thread$
     BEGIN
@@ -203,11 +228,9 @@ CREATE TRIGGER update_forum_threads AFTER UPDATE OR INSERT OR DELETE ON Thread
 CREATE OR REPLACE FUNCTION update_thread_vote_counter() RETURNS trigger AS $update_thread_vote_counter$
     BEGIN
         IF TG_OP='INSERT' THEN
---             UPDATE Thread SET votes=votes+NEW.vote WHERE id=NEW.thread;
             UPDATE ThreadVotes SET votes=votes+NEW.vote WHERE thread=NEW.thread;
             RETURN NEW;
         ELSIF TG_OP='UPDATE' THEN
---             UPDATE Thread SET votes=votes+(NEW.vote-OLD.vote) WHERE id=NEW.thread;
             UPDATE ThreadVotes SET votes=votes+(NEW.vote-OLD.vote) WHERE thread=NEW.thread;
             RETURN NEW;
         ELSE
@@ -218,16 +241,6 @@ $update_thread_vote_counter$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_thread_vote ON Vote;
 CREATE TRIGGER update_thread_vote AFTER INSERT OR UPDATE ON Vote
     FOR EACH ROW EXECUTE PROCEDURE update_thread_vote_counter();
-
-
--- CREATE OR REPLACE FUNCTION vote_thread(thread_ INTEGER, author_ citext, voice_ INTEGER) RETURNS void AS $update_thread_vote_counter$
---     BEGIN
---         INSERT INTO vote(thread, author, vote) VALUES (thread_, author_, voice_)
---                 ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
---             UPDATE SET vote=voice_ WHERE vote.thread=thread_ AND lower(vote.author)=lower(author_);
---     END
--- $update_thread_vote_counter$ LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION get_thread_id_by_slug(slugArg citext) RETURNS INTEGER AS $get_thread_id_by_slug$
     BEGIN
@@ -255,3 +268,6 @@ CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
 create index IF NOT EXISTS thread_forum ON thread(forum);
 create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
 create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
+
+create index if not exists forum_users_idx ON UsersInForum(forum);
+cluster UsersInForum USING forum_users_idx;
