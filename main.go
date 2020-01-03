@@ -27,7 +27,7 @@ const (
 //	http://localhost:5000/api/thread/1857/create
 
 func main() {
-	buildmode.LogTag = "log"
+	buildmode.LogTag = "no"
 	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
 	//runtime.GOMAXPROCS(6)
 	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()

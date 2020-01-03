@@ -181,8 +181,6 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
-	GetMutex(forumSlug)
-	defer FreeMutex(forumSlug)
 	prefix := `INSERT INTO UsersInForum(nickname, forum) VALUES `
 	postfix := `ON CONFLICT DO NOTHING`
 	query = sqlTools.CreatePacketQuery(prefix, 2, len(userList), postfix)
@@ -190,6 +188,8 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	for key := range userList {
 		params = append(params, key, forumSlug)
 	}
+	GetMutex(forumSlug)
+	defer FreeMutex(forumSlug)
 	_, err = r.DB.Exec(query, params...)
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
