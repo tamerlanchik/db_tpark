@@ -7,6 +7,7 @@
 --     nickname CITEXT COLLATE "English_United States.1252" CONSTRAINT nick_right CHECK(nickname'^[A-Za-z0-9]*$') UNIQUE
 -- );
 CREATE EXTENSION IF NOT EXISTS citext;
+DROP TABLE IF EXISTS ForumPosts;
 DROP TABLE If EXISTS UsersInForum;
 DROP TABLE If EXISTS ThreadVotes;
 DROP TABLE IF EXISTS Vote;
@@ -24,11 +25,15 @@ CREATE TABLE Users (
 
 -- _________Forum____________
 CREATE TABLE Forum (
-    posts INTEGER CONSTRAINT non_negative_posts_count CHECK (posts>=0) NOT NULL DEFAULT 0,  --autoincrement
     slug CITEXT PRIMARY KEY UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),
-    threads INTEGER CONSTRAINT non_negative_threads_count CHECK (threads>=0) DEFAULT 0,
+    threads INTEGER DEFAULT 0,
     title TEXT NOT NULL DEFAULT '',
     userNick CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL
+);
+
+create table ForumPosts (
+    forum citext PRIMARY KEY,
+    posts INTEGER DEFAULT 0
 );
 
 -- _______Thread__________
@@ -140,13 +145,10 @@ CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum
             NEW.forum = (SELECT forum FROM Thread WHERE Thread.id=NEW.thread);
         end if;
         IF TG_OP='INSERT' THEN
-            UPDATE Forum SET posts=posts+1 WHERE slug=NEW.forum;
---             IF NEW.parent=0 THEN
---                 NEW.parent=NEW.id;
---             END IF;
+--             UPDATE Forum SET posts=posts+1 WHERE slug=NEW.forum;
+            UPDATE ForumPosts SET posts=posts+1 WHERE forum=NEW.forum;
             if NEW.forum IS NULL THEN
                 RAISE NOTICE 'INSERT INTO Post';
---                 NEW.forum = (SELECT slug FROM Thread WHERE id=NEW.thread);
                 NEW.forum = 'test_forum';
             end if;
             RETURN NEW;

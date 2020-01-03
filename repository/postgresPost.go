@@ -6,6 +6,7 @@ import (
 	"db_tpark/structs"
 	"fmt"
 	"github.com/jackc/pgconn"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -132,15 +133,75 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		return posts, nil
 	}
 
-	query := `INSERT INTO Post (author, message, parent, thread) VALUES `
-	postfix := `RETURNING forum, id, created`
+	//query := `INSERT INTO Post (author, message, parent, thread) VALUES `
+	//postfix := `RETURNING forum, id, created`
+	//
+	//if len(posts) == 1{
+	//	query = query + `($1, $2, $3, $4) ` + postfix
+	//}else{
+	//	query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
+	//}
 
-	if len(posts) == 1{
-		query = query + `($1, $2, $3, $4) ` + postfix
-	}else{
-		query = sqlTools.CreatePacketQuery(query, 4, len(posts), postfix)
+
+	postPacketSize := 30
+	firstCreated := time.Now()
+	for i:=0; i<len(posts); i+=postPacketSize {
+		currentPacket := posts[i:int(math.Min(float64(i+postPacketSize), float64(len(posts))))]
+		currentPacket, err = r.createPostsByPacket(threadId, currentPacket, firstCreated)
+		if err != nil {
+			return posts, err
+		}
+		for j, post := range currentPacket{
+			posts[i+j] = post
+		}
 	}
+	//var params []interface{}
+	//for _, post := range posts {
+	//	var parent sql.NullInt64;
+	//	parent.Int64 = post.Parent;
+	//	if post.Parent!=0 {
+	//		parent.Valid = true;
+	//	}
+	//	params = append(params, post.Author, post.Message, parent, threadId)
+	//}
+	//
+	//
+	//rows, err := r.DB.Query(query, params...)
+	//if err != nil || (rows!=nil && rows.Err()!=nil){
+	//	switch err.(*pgconn.PgError).Code {
+	//	default:
+	//		return posts, structs.InternalError{E:"Unknown error"}
+	//	}
+	//}
+	//i := 0
+	//for rows.Next() {
+	//	var created time.Time
+	//	err := rows.Scan(&(posts[i].Forum), &(posts[i].Id), &(created))
+	//	if err != nil {
+	//		return posts, structs.InternalError{E: err.Error()}
+	//	}
+	//	posts[i].Created = created.Format(structs.OutTimeFormat)
+	//	posts[i].IsEdited = false
+	//	posts[i].Thread = int32(threadId)
+	//	i++
+	//}
+	//
+	////var cnt int64;
+	//if i==0 && len(posts) > 0{
+	//	// looking for exact error
+	//	if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+	//		return posts, structs.InternalError{E: structs.ErrorNoThread}
+	//	} else if row:= r.DB.QueryRow(`SELECT COUNT(nickname) FROM Users WHERE nickname=$1`, posts[0].Author); row.Scan(&cnt)!=nil || cnt==0 {
+	//		return posts, structs.InternalError{E: structs.ErrorNoThread}
+	//
+	//	}else{
+	//		return posts, structs.InternalError{E:structs.ErrorNoParent}
+	//	}
+	//}
+	return posts, nil
+}
 
+func (r *PostgresRepo) createPostsByPacket(threadId int64, posts []structs.Post, created time.Time) ([]structs.Post, error) {
 	var params []interface{}
 	for _, post := range posts {
 		var parent sql.NullInt64;
@@ -148,7 +209,16 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		if post.Parent!=0 {
 			parent.Valid = true;
 		}
-		params = append(params, post.Author, post.Message, parent, threadId)
+		params = append(params, post.Author, post.Message, parent, threadId, created)
+	}
+
+	query := `INSERT INTO Post (author, message, parent, thread, created) VALUES `
+	postfix := `RETURNING forum, id, created`
+
+	if len(posts) == 1{
+		query = query + `($1, $2, $3, $4, $5) ` + postfix
+	}else{
+		query = sqlTools.CreatePacketQuery(query, 5, len(posts), postfix)
 	}
 
 
@@ -172,7 +242,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 		i++
 	}
 
-	//var cnt int64;
+	var cnt int64;
 	if i==0 && len(posts) > 0{
 		// looking for exact error
 		if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {

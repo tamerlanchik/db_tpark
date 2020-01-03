@@ -25,12 +25,16 @@ func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 			//buildmode.Log.Println(e.Code)
 		}
 	}
+
+	if err == nil {
+		_, err = r.DB.Exec(`INSERT INTO ForumPosts(forum, posts) VALUES ($1, 0)`, slug)
+	}
 	return err
 }
 
 // работает быстро
 func (r *PostgresRepo) GetForum(slug string) (structs.Forum, error) {
-	query := `SELECT posts, threads, title, usernick, slug FROM Forum WHERE lower(slug)=lower($1);`
+	query := `SELECT (SELECT ForumPosts.posts FROM ForumPosts WHERE ForumPosts.forum=slug), threads, title, usernick, slug FROM Forum WHERE lower(slug)=lower($1);`
 
 	var forum structs.Forum
 	err := r.DB.QueryRow(query, slug).Scan(&forum.Posts, &forum.Threads, &forum.Title, &forum.User, &forum.Slug)
