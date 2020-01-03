@@ -22,7 +22,7 @@ func (r *PostgresRepo) CreateForum(slug, title, user string) error {
 			err = structs.InternalError{E: structs.ErrorDuplicateKey}
 			break
 		default:
-			//fmt.Println(e.Code)
+			//buildmode.Log.Println(e.Code)
 		}
 	}
 	return err

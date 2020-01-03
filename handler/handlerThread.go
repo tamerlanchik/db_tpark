@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"db_tpark/buildmode"
 	"db_tpark/repository"
 	"db_tpark/structs"
-	"fmt"
 	"time"
 
 	//"fmt"
@@ -34,15 +34,15 @@ func(h *ThreadHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	tic := time.Now()
-	defer timeLogger.Write("/post/create", tic)
+	//tic := time.Now()
+	//defer timeLogger.Write("/post/create", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
 	args := mux.Vars(r)
 	idOrSlug, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 
@@ -58,12 +58,12 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	var post []structs.Post
 	err := HttpTools.StructFromBody(*r, &post)
 	if err != nil {
-		fmt.Println("Error struct got")
+		buildmode.Log.Println("Error struct got")
 		return
 	}
 	post, err = h.repo.CreatePost(threadId, post)
 	if err != nil {
-		fmt.Println("Error in CreatePost: ", err)
+		buildmode.Log.Println("Error in CreatePost: ", err)
 		switch err.(structs.InternalError).E{
 		case structs.ErrorNoThread:
 			resp.SetStatus(404)
@@ -78,19 +78,19 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp.SetStatus(201).SetContent(post)
-	//fmt.Println(time.Now())
+	//buildmode.Log.Println(time.Now())
 }
 
 func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
-	tic := time.Now()
-	defer timeLogger.Write("/thread/details", tic)
+	//tic := time.Now()
+	//defer timeLogger.Write("/thread/details", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "id")
+		buildmode.Log.Println("No such a param: ", "id")
 		return
 	}
 	threadId, err := strconv.ParseInt(id, 10, 64)
@@ -104,7 +104,7 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		fmt.Println("Error in GetPostDetails: ", err)
+		buildmode.Log.Println("Error in GetPostDetails: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
@@ -113,17 +113,17 @@ func (h *ThreadHandler) GetDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
-	tic := time.Now()
-	defer timeLogger.Write("/thread/update", tic)
+	//tic := time.Now()
+	//defer timeLogger.Write("/thread/update", tic)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
-	//fmt.Println(debugCounter)
+	//buildmode.Log.Println(debugCounter)
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "id")
+		buildmode.Log.Println("No such a param: ", "id")
 		return
 	}
 
@@ -131,7 +131,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 
 	err := HttpTools.StructFromBody(*r, &thread)
 	if err != nil {
-		fmt.Println("Invalid body")
+		buildmode.Log.Println("Invalid body")
 		return
 	}
 
@@ -143,12 +143,12 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if debugCounter>=4 {
-		//fmt.Println(debugCounter)
+		//buildmode.Log.Println(debugCounter)
 	}
 	err = h.repo.EditThread(thread)
 
 	if err != nil {
-		fmt.Println("Error in UpdateThread-EditThread: ", err)
+		buildmode.Log.Println("Error in UpdateThread-EditThread: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
@@ -159,7 +159,7 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		thread, err = h.repo.GetThread(int64(thread.Id))
 	}
 	if err != nil {
-		fmt.Println("Error in UpdateThread-GetThread ", err)
+		buildmode.Log.Println("Error in UpdateThread-GetThread ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
@@ -168,8 +168,8 @@ func (h *ThreadHandler) UpdateThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
-	tic := time.Now()
-	defer timeLogger.Write("/thread/vote", tic)
+	//tic := time.Now()
+	//defer timeLogger.Write("/thread/vote", tic)
 	start := time.Now()
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
@@ -178,7 +178,7 @@ func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
 	idString, ok := args["id"]
 	var id interface{}
 	if !ok {
-		fmt.Println("Error Vote: No such a param: ", "id")
+		buildmode.Log.Println("Error Vote: No such a param: ", "id")
 		return
 	}
 	var err error
@@ -193,40 +193,40 @@ func (h *ThreadHandler) Vote(w http.ResponseWriter, r *http.Request) {
 
 	err = HttpTools.StructFromBody(*r, &req)
 	if err != nil {
-		fmt.Println("Error Vote: Invalid body")
+		buildmode.Log.Println("Error Vote: Invalid body")
 		return
 	}
 
-	fmt.Println("Begin: ", time.Since(start))
+	buildmode.Log.Println("Begin: ", time.Since(start))
 	err = h.repo.VoteThread(id, req.Nickname, req.Voice)
 	if err != nil {
-		fmt.Println("Error in Vote: ", err)
+		buildmode.Log.Println("Error in Vote: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
-	fmt.Println("Vote done: ", time.Since(start))
+	buildmode.Log.Println("Vote done: ", time.Since(start))
 	thread, err := h.repo.GetThread(id)
 	if err != nil {
-		fmt.Println("Error in Vote: cannot get thread: ", err)
+		buildmode.Log.Println("Error in Vote: cannot get thread: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42\n"})
 		return
 	}
 	resp.SetStatus(200).SetContent(thread)
-	fmt.Println("End: ", time.Since(start))
+	buildmode.Log.Println("End: ", time.Since(start))
 }
 
 func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
-	tic := time.Now()
-	defer timeLogger.Write("/thread/getPosts", tic)
+	//tic := time.Now()
+	//defer timeLogger.Write("/thread/getPosts", tic)
 	counter++
-	//fmt.Println(counter)
+	//buildmode.Log.Println(counter)
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 
 	args := mux.Vars(r)
 	threadKey, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	limit, _ := strconv.ParseInt(r.FormValue("limit"), 10, 64)
@@ -241,7 +241,7 @@ func (h *ThreadHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	posts, err := h.repo.GetPosts(threadKey, limit, since, sort, desc)
 	if err != nil{
-		fmt.Println("Error in GetPosts: ", err)
+		buildmode.Log.Println("Error in GetPosts: ", err)
 		resp.
 			SetStatus(404).SetContent(structs.Error{Message:"Can-t fiтв forum with slug " + threadKey})
 		return

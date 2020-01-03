@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"db_tpark/buildmode"
 	"db_tpark/pkg/HttpTools"
 	"db_tpark/repository"
-	"fmt"
 	"time"
 
 	//"fmt"
@@ -45,7 +45,7 @@ func (h *ServiceHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.repo.GetDBAccount()
 	if err != nil {
-		fmt.Println("Error in GetStatus: ", err)
+		buildmode.Log.Println("Error in GetStatus: ", err)
 		return
 	}
 	response.Forum = data["forum"]

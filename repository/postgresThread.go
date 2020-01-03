@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"db_tpark/buildmode"
 	"db_tpark/structs"
 	"fmt"
 	pg "github.com/jackc/pgconn"
@@ -25,7 +26,7 @@ func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, erro
 	thread.Slug = slug.String
 
 	if err != nil {
-		fmt.Println("Error in PSCreateThread: ", err)
+		buildmode.Log.Println("Error in PSCreateThread: ", err)
 		if e, ok := err.(*pg.PgError); ok {
 			switch e.Code{
 			case "23503", "523502":
@@ -39,7 +40,7 @@ func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, erro
 				err = structs.InternalError{E: structs.ErrorDuplicateKey}
 				break
 			default:
-				//fmt.Println(e.Code)
+				//buildmode.Log.Println(e.Code)
 			}
 		} else {
 			err = structs.InternalError{E: structs.ErrorNoForum}
@@ -149,7 +150,6 @@ func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
 }
 
 func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int) error {
-
 	var id int64
 	var ok bool
 	if id, ok = threadKey.(int64); !ok {
@@ -159,9 +159,29 @@ func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int)
 			return err
 		}
 	}
+	//var oldVote int
+	//err := r.DB.QueryRow(`SELECT coalesce(votes, 0) FROM vote WHERE vote.thread=$1 AND vote.author=$2`,
+	//		id, user).Scan(&oldVote)
+	//
+	//query := `DELETE FROM Vote WHERE thread=$1 and author=$2`
+	//_, err = r.DB.Exec(query, id, user)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//query = `INSERT INTO Vote (thread, author, vote) VALUES ($1, $2, $3);`
+	//_, err = r.DB.Exec(query, id, user, voice)
+	//if err != nil {
+	//	return err
+	//}
+	//query = `UPDATE ThreadVotes SET votes=votes+$2 WHERE thread=$1;`
+	//_, err =r.DB.Exec(query, id, voice-oldVote);
+	//return err
+
+
 	query := `INSERT INTO vote(thread, author, vote) VALUES ($1, $2, $3)
-                ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
-            UPDATE SET vote=$3 WHERE vote.thread=$1 AND lower(vote.author)=lower($2)`
+               ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
+           UPDATE SET vote=$3 WHERE vote.thread=$1 AND lower(vote.author)=lower($2)`
 	_, err := r.DB.Exec(query, id, user, voice)
 	return err
 }

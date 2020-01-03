@@ -1,10 +1,9 @@
 package handler
 
 import (
-
+	"db_tpark/buildmode"
 	"db_tpark/repository"
 	"db_tpark/structs"
-	"fmt"
 	"time"
 
 	//"fmt"
@@ -36,20 +35,20 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	tic := time.Now()
 	defer timeLogger.Write("/post/getDetails", tic)
 	GetPostCounter++
-	//fmt.Println("GetPostDetails", GetPostCounter)
+	//buildmode.Log.Println("GetPostDetails", GetPostCounter)
 	//if GetPostCounter>=18{
-	//	//fmt.Println("GetPostDetails")
+	//	//buildmode.Log.Println("GetPostDetails")
 	//}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
-	//fmt.Println("D", debugCounter, time.Now())
+	//buildmode.Log.Println("D", debugCounter, time.Now())
 
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	rel := r.URL.Query()["related"]
@@ -59,12 +58,12 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 	}
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		fmt.Println("Wrong param: ", "id")
+		buildmode.Log.Println("Wrong param: ", "id")
 		return
 	}
 	posts, err := h.repo.GetPostAccount(idInt, related)
 	if err != nil {
-		fmt.Println("Error in GetPostDetails: ", err)
+		buildmode.Log.Println("Error in GetPostDetails: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}
@@ -79,43 +78,43 @@ func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
 	tic := time.Now()
 	defer timeLogger.Write("/post/change", tic)
 	EditPostCounter++
-	//fmt.Println("Edit post", EditPostCounter)
+	//buildmode.Log.Println("Edit post", EditPostCounter)
 	if EditPostCounter>=3 {
-		//fmt.Println("Edit post", EditPostCounter)
+		//buildmode.Log.Println("Edit post", EditPostCounter)
 	}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;
 	//time.Sleep(5*time.Second)
-	//fmt.Println("A", debugCounter, time.Now())
+	//buildmode.Log.Println("A", debugCounter, time.Now())
 
 	args := mux.Vars(r)
 	id, ok := args["id"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 
 	var post structs.Post
 	err := HttpTools.StructFromBody(*r, &post)
 	if err != nil {
-		fmt.Println("No such a param: ", "post")
+		buildmode.Log.Println("No such a param: ", "post")
 		return
 	}
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		fmt.Println("Wrong param: ", "id")
+		buildmode.Log.Println("Wrong param: ", "id")
 		return
 	}
 	err = h.repo.EditPost(idInt, post)
 	if err != nil {
-		fmt.Println("Error in ChangePost-EdiPost: ", err)
+		buildmode.Log.Println("Error in ChangePost-EdiPost: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}
 	post, err = h.repo.GetPost(idInt)
 	if err != nil {
-		fmt.Println("Error in ChangePost-GetPost: ", err)
+		buildmode.Log.Println("Error in ChangePost-GetPost: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
 		return
 	}

@@ -51,13 +51,13 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 			return structs.InternalError{E:structs.ErrorNoUser}
 		}
 	}
-	//fmt.Println("a")
+	//buildmode.Log.Println("a")
 	return err
 }
 
 func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
 	counter++
-	//fmt.Println(counter)
+	//buildmode.Log.Println(counter)
 	users := make([]structs.User, 0)
 	query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
 				(SELECT DISTINCT author FROM Thread WHERE forum=$1)
@@ -92,8 +92,8 @@ func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, des
 
 	var rows *sql.Rows
 	var err error
-	//fmt.Println(query)
-	//fmt.Println(forumSlug, since, limit)
+	//buildmode.Log.Println(query)
+	//buildmode.Log.Println(forumSlug, since, limit)
 	rows, err = r.DB.Query(query, params...)
 	if err != nil {
 		return users, err

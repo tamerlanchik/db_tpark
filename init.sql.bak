@@ -43,7 +43,7 @@ CREATE TABLE Thread (
 );
 
 create table ThreadVotes (
-    thread BIGINT NOT NULL,
+    thread BIGINT REFERENCES Thread(id) NOT NULL,
     votes INTEGER NOT NULL DEFAULT 0
 );
 
@@ -55,23 +55,23 @@ CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $
 $get_post_thread$ LANGUAGE plpgsql;
 
 CREATE TABLE Post (
-    author CITEXT REFERENCES Users (nickname) NOT NULL,
+    author CITEXT REFERENCES Users (nickname) ON DELETE RESTRICT ON UPDATE RESTRICT NOT NULL,
     created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    forum CITEXT,
+    forum CITEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
     id BIGSERIAL PRIMARY KEY,
     isEdited BOOLEAN NOT NULL DEFAULT false,
     message TEXT NOT NULL DEFAULT '',
     parent BIGINT REFERENCES Post (id) ON DELETE CASCADE ON UPDATE RESTRICT
         CONSTRAINT par CHECK (get_thread_by_post(parent)=thread),
-    thread INTEGER,
+    thread INTEGER REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE RESTRICT,
     path bigint[] not null
 );
 
 -- ______Vote______
 CREATE TABLE Vote (
-    thread BIGINT,
+    thread BIGINT REFERENCES Thread (id) ON DELETE CASCADE ON UPDATE CASCADE,
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
-    vote SMALLINT DEFAULT 0,
+    vote SMALLINT CONSTRAINT check_vote CHECK (vote>=-1 AND vote <=1 ) DEFAULT 0,
     UNIQUE (thread, author)
 );
 
@@ -244,9 +244,8 @@ CREATE UNIQUE INDEX forum_slug_index on Forum (LOWER(slug));
 -- CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
 -- CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
 -- CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
-create index IF NOT EXISTS post__thread ON Post(thread);
-create index IF NOT EXISTS post__id_thread ON post(id, thread);
-create index IF NOT EXISTS post__path__first ON Post((path[1]));
+create index post__thread ON Post(thread);
+create index post__path__first ON Post((path[1]));
 create index IF NOT EXISTS post_forum_author ON post(forum, author);
 CREATE INDEX IF NOT EXISTS idx_sth ON Post (lower(author));
 
@@ -255,3 +254,9 @@ CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
 create index IF NOT EXISTS thread_forum ON thread(forum);
 create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
 create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
+
+
+INSERT INTO Users (email, fullname, nickname, about) VALUES ('ivanov.vanya@mail.ry', 'Ian', 'tamerlanchik', 'About me');
+INSERT INTO Forum (slug, title, userNick) VALUES ('test_forum', 'Hello, world', 'tamerlanchik');
+INSERT INTO Thread (author, forum, message, slug, title) VALUES ('tamerlanchik', 'test_forum', 'Hello fucking world!', 'test_thread', 'Fucking world!'), ('tamerlanchik', 'test_forum', 'Die', 'next_thread', 'DieDie');
+INSERT INTO Post (author, forum, message, thread) VALUES ('tamerlanchik', 'test_forum', 'Hello', 1);

@@ -63,11 +63,11 @@ func (r *Response) Copy() Response {
 
 func (r *Response) Send() {
 	if r.body == nil {
-		//fmt.Println("Nil error")
+		//buildmode.Log.Println("Nil error")
 	}
 	body, err := json.Marshal(r.body)
 	if err != nil {
-		//fmt.Println("Cannot encode json")
+		//buildmode.Log.Println("Cannot encode json")
 		return
 	}
 	r.writer.Header().Set("Content-Type", "application/json")

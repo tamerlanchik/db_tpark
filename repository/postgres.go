@@ -24,7 +24,7 @@ func NewPostgresRepo() *PostgresRepo {
 }
 
 func (r *PostgresRepo) Init(user, pass, host, port, dbname string) error {
-	dsnTemplate := "postgres://%s:%s@%s:%s/%s?sslmode=disable"
+	dsnTemplate := "postgres://%s:%s@%s:%s/%s"
 	dsn := fmt.Sprintf(dsnTemplate, user, pass, host, port, dbname)
 
 	var err error
@@ -32,6 +32,9 @@ func (r *PostgresRepo) Init(user, pass, host, port, dbname string) error {
 	if err != nil {
 		return err
 	}
+
+	r.DB.SetMaxOpenConns(8)
+	r.DB.SetMaxIdleConns(4)
 
 	return r.DB.Ping()
 }

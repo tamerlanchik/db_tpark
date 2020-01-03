@@ -7,7 +7,7 @@ WORKDIR /go/src/db_tpark
 RUN go get -v ./...
 
 # Собираем генераторы
-#WORKDIR /opt/build/db_tpark
+#WORKDIR /opt/buildmode/db_tpark
 #RUN go mod vendor
 #RUN go install ./vendor/github.com/go-swagger/go-swagger/cmd/swagger
 #RUN go install ./vendor/github.com/jteeuwen/go-bindata/go-bindata
@@ -51,15 +51,19 @@ RUN /etc/init.d/postgresql start &&\
 #RUN  echo 'local all docker trust' | cat - /etc/postgresql/$PGVER/main/pg_hba.conf > /etc/postgresql/$PGVER/main/pg_hba.conf.bak && mv /etc/postgresql/$PGVER/main/pg_hba.conf.bak /etc/postgresql/$PGVER/main/pg_hba.conf
 
 # And add ``listen_addresses`` to ``/etc/postgresql/$PGVER/main/postgresql.conf``
-RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "fsync = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "synchronous_commit = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "shared_buffers = 500MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "effective_cache_size = 700MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "work_mem = 1MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
-    echo "wal_buffers = 1MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
+
+#RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "fsync = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "synchronous_commit = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "full_page_writes = off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "shared_buffers = 500MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "effective_cache_size = 700MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "work_mem = 1MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+#    echo "wal_buffers = 1MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
+
+RUN echo "include_dir='conf.d'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+ADD ./postgresql.conf /etc/postgresql/$PGVER/main/conf.d/basic.conf
 
 
 
@@ -77,7 +81,7 @@ EXPOSE 5000
 
 # Собранный ранее сервер
 COPY --from=build go/bin/forum /usr/bin/
-#COPY --from=build go/src/db_tpark/init.sql /
+#COPY --from=buildmode go/src/db_tpark/init.sql /
 #
 #RUN psql -U postgres dbtpark < ./init.sql
 

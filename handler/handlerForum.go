@@ -1,11 +1,10 @@
 package handler
 
 import (
+	"db_tpark/buildmode"
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
-	"sync"
-
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
@@ -19,37 +18,24 @@ type ForumHandler struct {
 }
 
 func init() {
-	timeLogger.Init()
+	if timeLogger == nil {
+		timeLogger = &MockLogger{}
+		timeLogger.Init()
+	}
 }
 
-type TimeLogger struct{
-	data map[string][]int64
-	mutex sync.Mutex
-}
-
-func (l *TimeLogger) Write(path string, val time.Time) {
-	t := int64(time.Since(val)) / 1e6
-	l.mutex.Lock()
-	l.data[path] = append(l.data[path], t)
-	l.mutex.Unlock()
-}
-
-func (l *TimeLogger) Init() {
-	l.data = make(map[string][]int64)
-}
 
 func PrintMetrics() {
 	d := timeLogger
-	//fmt.Println(d.data)
-	for path, times := range d.data {
-		fmt.Println(path)
+	for path, times := range d.Data() {
+		buildmode.Log.Println(path)
 		list := make([]int64, 0)
 		for _, elem := range times{
 			if elem > 5 {
 				list = append(list, elem)
 			}
 		}
-		fmt.Println(list)
+		buildmode.Log.Println(list)
 		fmt.Printf("Avr: %d\n", func() int64 {
 			var res int64
 			for _, val := range times {
@@ -61,7 +47,7 @@ func PrintMetrics() {
 	}
 }
 
-var timeLogger TimeLogger
+var timeLogger Logger
 
 
 func NewForumHandler(repo repository.Repository) *ForumHandler {
@@ -85,16 +71,16 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 	var forum structs.Forum
 	err := HttpTools.StructFromBody(*r, &forum)
 	if err != nil {
-		fmt.Println(err)
+		buildmode.Log.Println(err)
 		return
 	}
 	err = h.repo.CreateForum(forum.Slug, forum.Title, forum.User)
 	if err != nil {
-		fmt.Println("Error in Create Forum: ", err)
+		buildmode.Log.Println("Error in Create Forum: ", err)
 		e := err.(structs.InternalError)
 		switch e.E{
 		case structs.ErrorNoUser:
-			//fmt.Println("Error in Create Forum: ", err)
+			//buildmode.Log.Println("Error in Create Forum: ", err)
 			resp.
 				SetStatus(404).
 				SetContent(structs.Error{Message:"Can-t fine user with nick " + forum.User})
@@ -103,7 +89,7 @@ func (h *ForumHandler) CreateForum(w http.ResponseWriter, r *http.Request) {
 			forum, err = h.repo.GetForum(forum.Slug)
 			resp.SetStatus(409).SetContent(forum)
 		}
-		//fmt.Println("Error in Create Forum: ", err)
+		//buildmode.Log.Println("Error in Create Forum: ", err)
 		return
 	}
 	forum, _ = h.repo.GetForum(forum.Slug)
@@ -119,13 +105,13 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	var req structs.Thread
 	err := HttpTools.StructFromBody(*r, &req)
 	if err != nil {
-		fmt.Println("Wrror body in CreateThread")
+		buildmode.Log.Println("Wrror body in CreateThread")
 		return
 	}
 	req.Forum = forumSlug
@@ -134,7 +120,7 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 	}
 	thread, err := h.repo.CreateThread(req)
 	if err != nil {
-		fmt.Println("Error in CreateThread: ", err)
+		buildmode.Log.Println("Error in CreateThread: ", err)
 		e := err.(structs.InternalError)
 		switch e.E{
 		case structs.ErrorNoUser:
@@ -150,7 +136,7 @@ func (h *ForumHandler) CreateThread(w http.ResponseWriter, r *http.Request) {
 		case structs.ErrorDuplicateKey:
 			thread, err := h.repo.GetThread(req.Slug)
 			if err != nil {
-				//fmt.Println(err)
+				//buildmode.Log.Println(err)
 			}
 			resp.
 				SetStatus(409).
@@ -171,13 +157,13 @@ func (h *ForumHandler) GetForumDetails(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		//buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	var forum structs.Forum
 	forum, err := h.repo.GetForum(forumSlug)
 	if err != nil {
-		fmt.Println("Error in GetForumDetails: ", err)
+		buildmode.Log.Println("Error in GetForumDetails: ", err)
 		resp.
 			SetStatus(404).
 			SetContent(structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
@@ -196,7 +182,7 @@ func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		//buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 64)
@@ -206,7 +192,7 @@ func (h *ForumHandler) GetForumThreads(w http.ResponseWriter, r *http.Request) {
 
 	threads, err := h.repo.GetThreads(forumSlug, limit, since, desc)
 	if err != nil{
-		fmt.Println("Error in GetThreads: ", err)
+		buildmode.Log.Println("Error in GetThreads: ", err)
 		resp.
 			SetStatus(404).SetContent(structs.Error{Message:"Can-t fiтв forum with slug " + forumSlug})
 		return
@@ -223,7 +209,7 @@ func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	forumSlug, ok := args["slug"]
 	if !ok {
-		fmt.Println("No such a param: ", "slug")
+		buildmode.Log.Println("No such a param: ", "slug")
 		return
 	}
 	limit, err := strconv.ParseInt(r.FormValue("limit"), 10, 64)
@@ -238,14 +224,14 @@ func (h *ForumHandler) ForumUsers(w http.ResponseWriter, r *http.Request) {
 
 	forum, err := h.repo.GetForum(forumSlug)
 	if err != nil || forum.Slug==""{
-		fmt.Println("Error in ForumUsers-GetForum: ", err)
+		buildmode.Log.Println("Error in ForumUsers-GetForum: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can-t find forum with slug " + forumSlug})
 		return
 	}
 
 	users, err := h.repo.GetUsers(forumSlug, limit, since, desc)
 	if err != nil{
-		fmt.Println("Error in ForumUsers-GetUsers: ", err)
+		buildmode.Log.Println("Error in ForumUsers-GetUsers: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can-t find forum with slug " + forumSlug})
 		return
 	}

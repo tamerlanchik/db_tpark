@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"db_tpark/buildmode"
 	"db_tpark/repository"
 	"db_tpark/structs"
-	"fmt"
 	"time"
 
 	//"fmt"
@@ -29,38 +29,38 @@ func(h *UserHandler) InflateRouter(r *mux.Router) {
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	tic := time.Now()
 	defer timeLogger.Write("/user/create", tic)
-	//fmt.Println("CreateUser: prestart")
+	//buildmode.Log.Println("CreateUser: prestart")
 	resp := HttpTools.NewResponse(w)
-	//fmt.Println("CreateUser: resp", resp)
+	//buildmode.Log.Println("CreateUser: resp", resp)
 	defer resp.Send()
-	//fmt.Println("CreateUser: start")
+	//buildmode.Log.Println("CreateUser: start")
 
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	var user structs.User
 	err := HttpTools.StructFromBody(*r, &user)
 	if err != nil {
-		fmt.Println("Cannot parse Createuser body")
+		buildmode.Log.Println("Cannot parse Createuser body")
 		return
 	}
 	user.Nickname = nickname
 
-	//fmt.Println("CreateUser: before-repo")
+	//buildmode.Log.Println("CreateUser: before-repo")
 	err = h.repo.AddUser(user)
-	//fmt.Println("CreateUser: after-repo")
+	//buildmode.Log.Println("CreateUser: after-repo")
 	if err == nil {
 		resp.SetStatus(201).SetContent(user)
 		return
 	} else {
 		var ans []structs.User
-		fmt.Println("Error in CreateUser-AddUser: ", err)
+		buildmode.Log.Println("Error in CreateUser-AddUser: ", err)
 		existUserByEmail, err := h.repo.GetUser(user.Email, "")
 		if err == nil {
-			fmt.Println("Error in CreateUser-GetUser: ", err)
+			buildmode.Log.Println("Error in CreateUser-GetUser: ", err)
 			ans = append(ans, existUserByEmail)
 		}
 
@@ -68,7 +68,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		if err == nil && existUserByNick.Email!=existUserByEmail.Email{
 			ans = append(ans, existUserByNick)
 		}
-		//fmt.Println("Error in Create user: ", err)
+		//buildmode.Log.Println("Error in Create user: ", err)
 		resp.SetStatus(409).SetContent(ans)
 	}
 }
@@ -82,12 +82,12 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
-		//fmt.Println("No such a param: ", "nick")
+		//buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	user, err := h.repo.GetUser("", nickname)
 	if err != nil {
-		fmt.Println("Error in GetUser: ", err)
+		buildmode.Log.Println("Error in GetUser: ", err)
 		resp.
 			SetStatus(404).
 			SetContent(struct{
@@ -108,20 +108,20 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	nickname, ok := args["nick"]
 	if !ok {
-		fmt.Println("No such a param: ", "nick")
+		buildmode.Log.Println("No such a param: ", "nick")
 		return
 	}
 	var user structs.User
 	err := HttpTools.StructFromBody(*r, &user)
 	if err != nil {
-		fmt.Println("Cannot parse Updateeuser body")
+		buildmode.Log.Println("Cannot parse Updateeuser body")
 		return
 	}
 	user.Nickname = nickname
 
 	err = h.repo.EditUser(user)
 	if err != nil {
-		fmt.Println("Error in UpdateUser-EditUser: ", err)
+		buildmode.Log.Println("Error in UpdateUser-EditUser: ", err)
 		switch err.Error() {
 		case structs.ErrorDuplicateKey:
 			resp.
@@ -141,7 +141,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err = h.repo.GetUser("", nickname)
 	if err != nil {
-		fmt.Println("Error in UpdateUser-GetUser: ", err)
+		buildmode.Log.Println("Error in UpdateUser-GetUser: ", err)
 		resp.
 			SetStatus(404).
 			SetContent(struct{
