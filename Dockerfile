@@ -63,7 +63,7 @@ RUN /etc/init.d/postgresql start &&\
 #    echo "wal_buffers = 1MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 RUN echo "include_dir='conf.d'" >> /etc/postgresql/$PGVER/main/postgresql.conf
-ADD ./postgresql.conf /etc/postgresql/$PGVER/main/conf.d/basic.conf
+ADD ./postgres.conf /etc/postgresql/$PGVER/main/conf.d/basic.conf
 
 
 
