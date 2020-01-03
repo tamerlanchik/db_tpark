@@ -41,11 +41,14 @@ func (r *PostgresRepo) Init(user, pass, host, port, dbname string) error {
 
 func (r *PostgresRepo) ClearAll() error {
 	query := `
+			TRUNCATE ForumPosts;
+			TRUNCATE UsersInForum;
+			TRUNCATE ThreadVotes;
 			TRUNCATE TABLE vote CASCADE;
 			TRUNCATE TABLE Post CASCADE;
 			TRUNCATE TABLE Thread CASCADE;
 			TRUNCATE TABLE Forum CASCADE;
-			TRUNCATE TABLE Users CASCADE;
+			TRUNCATE TABLE Users CASCADE;			
 		`
 	_, err := r.DB.Exec(query)
 	return err

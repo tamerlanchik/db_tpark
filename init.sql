@@ -141,21 +141,10 @@ CREATE TRIGGER forum_user BEFORE INSERT ON Forum
 -- Триггер на Post-ы. Отвечает за счетчики в Forum и за read-only данные Post
 CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum_posts$
     BEGIN
-        IF TG_OP='INSERT' OR TG_OP='UPDATE' THEN
-            NEW.forum = (SELECT forum FROM Thread WHERE Thread.id=NEW.thread);
-        end if;
-        IF TG_OP='INSERT' THEN
---             UPDATE Forum SET posts=posts+1 WHERE slug=NEW.forum;
-            UPDATE ForumPosts SET posts=posts+1 WHERE forum=NEW.forum;
-            if NEW.forum IS NULL THEN
-                RAISE NOTICE 'INSERT INTO Post';
-                NEW.forum = 'test_forum';
-            end if;
-            RETURN NEW;
-        ELSIF TG_OP='DELETE' OR TG_OP='TRUNCATE' THEN
-            UPDATE Forum SET posts=posts-1 WHERE slug=OLD.forum;
+        IF TG_OP='DELETE' OR TG_OP='TRUNCATE' THEN
+            UPDATE ForumPosts SET posts=posts-1 WHERE forum=OLD.forum;
             RETURN OLD;
-        ELSE
+        ELSIF TG_OP='UPDATE' THEN
             IF NEW.created!=OLD.created THEN
                 RAISE EXCEPTION 'const .created';
             END IF;
@@ -176,21 +165,19 @@ CREATE OR REPLACE FUNCTION update_forum_posts() RETURNS trigger AS $update_forum
             end if;
             RETURN NEW;
         END IF;
-
+        RETURN NEW;
     END
 $update_forum_posts$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_forum_posts ON Post;
-CREATE TRIGGER update_forum_posts BEFORE UPDATE OR INSERT OR DELETE ON Post
+CREATE TRIGGER update_forum_posts BEFORE UPDATE OR DELETE ON Post
     FOR EACH ROW EXECUTE PROCEDURE update_forum_posts();
 
 -- Триггер на Post. Выставляет путь
 CREATE OR REPLACE FUNCTION post_path() RETURNS TRIGGER AS
 $post_path$
 BEGIN
-    if TG_OP='INSERT' then
-        NEW.path = (SELECT path FROM Post WHERE id = NEW.parent) || NEW.id;
-        RETURN NEW;
-    end if;
+    NEW.path = (SELECT path FROM Post WHERE id = NEW.parent) || NEW.id;
+    RETURN NEW;
 END;
 $post_path$ LANGUAGE plpgsql;
 CREATE TRIGGER post_path BEFORE INSERT ON Post
