@@ -21,6 +21,7 @@ const (
 	port = "5000"
 )
 
+//	http://localhost:5000/api/thread/1857/create
 
 func main() {
 	buildmode.LogTag = "no"
