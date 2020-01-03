@@ -6,7 +6,7 @@
 --     fullname TEXT NOT NULL DEFAULT '',
 --     nickname CITEXT COLLATE "English_United States.1252" CONSTRAINT nick_right CHECK(nickname'^[A-Za-z0-9]*$') UNIQUE
 -- );
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+-- CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 CREATE EXTENSION IF NOT EXISTS citext;
 DROP TABLE IF EXISTS ForumPosts;
 DROP TABLE If EXISTS UsersInForum;
