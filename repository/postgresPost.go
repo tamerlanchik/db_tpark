@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-func init() {
-	UsersForum = make(map[string][]string)
-}
+//func init() {
+//	UsersForum = make(map[string][]string)
+//}
 var postCounter int64
-var UsersForum map[string][]string
+//var UsersForum map[string][]string
 func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	query := queryGetPost
 	var post structs.Post
@@ -192,11 +192,7 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 	query := `INSERT INTO Post (author, message, parent, thread, created, forum) VALUES `
 	postfix := `RETURNING forum, id, created`
 
-	if len(posts) == 1{
-		query = query + `($1, $2, $3, $4, $5, $6) ` + postfix
-	}else{
-		query = sqlTools.CreatePacketQuery(query, 6, len(posts), postfix)
-	}
+	query = sqlTools.CreatePacketQuery(query, 6, len(posts), postfix)
 
 
 	rows, err := r.DB.Query(query, params...)

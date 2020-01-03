@@ -84,8 +84,7 @@ CREATE TABLE Vote (
 
 create table UsersInForum (
     nickname CITEXT COLLATE "POSIX",
-    forum citext,
-    unique (nickname, forum)
+    forum citext
 );
 
 create or replace function users_forum() returns trigger as $users_forum$
