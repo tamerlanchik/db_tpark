@@ -4,6 +4,7 @@ import (
 	"db_tpark/buildmode"
 	"db_tpark/handler"
 	"db_tpark/repository"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 )
+
+//	http://localhost:5000/api/thread/37/create
 
 const (
 	dbuser = "docker"
@@ -24,12 +27,12 @@ const (
 //	http://localhost:5000/api/thread/1857/create
 
 func main() {
-	buildmode.LogTag = "no"
-	buildmode.Log.Println("Start server ", runtime.GOMAXPROCS(0))
+	buildmode.LogTag = "log"
+	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
 	//runtime.GOMAXPROCS(6)
 	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
 	if err:= InflateRouter(mainRouter); err !=nil {
-		buildmode.Log.Println("Error inflating router:", err)
+		fmt.Println("Error inflating router:", err)
 		if buildmode.BuildTag=="debug" {
 			return
 		}
@@ -41,7 +44,7 @@ func main() {
 	//	//buildmode.Log.Println("FF", r.URL)
 	//})
 	err := http.ListenAndServe(":"+port, mainRouter)
-	buildmode.Log.Println("Stop server: ", err)
+	fmt.Println("Stop server: ", err)
 }
 
 func InflateRouter(r *mux.Router) error {

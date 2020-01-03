@@ -181,7 +181,7 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 	if err != nil || (rows!=nil && rows.Err()!=nil){
 		switch err.(*pgconn.PgError).Code {
 		default:
-			return posts, structs.InternalError{E:"Unknown error"}
+			return posts, structs.InternalError{E:"Unknown error", Explain:err.Error()}
 		}
 	}
 	i := 0
@@ -189,7 +189,7 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 		var created time.Time
 		err := rows.Scan(&(posts[i].Forum), &(posts[i].Id), &(created))
 		if err != nil {
-			return posts, structs.InternalError{E: err.Error()}
+			return posts, structs.InternalError{E: err.Error(), Explain:err.Error()}
 		}
 		posts[i].Created = created.Format(structs.OutTimeFormat)
 		posts[i].IsEdited = false
@@ -206,7 +206,7 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 			return posts, structs.InternalError{E: structs.ErrorNoThread}
 
 		}else{
-			return posts, structs.InternalError{E:structs.ErrorNoParent}
+			return posts, structs.InternalError{E:structs.ErrorNoParent, Explain: "Third branch"}
 		}
 	}
 	return posts, nil

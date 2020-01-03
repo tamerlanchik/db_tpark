@@ -74,7 +74,7 @@ func (h *ThreadHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		default:
 			resp.SetStatus(409)
 		}
-		resp.SetContent(structs.Error{Message:"Can't find user with id #42\n"})
+		resp.SetContent(structs.Error{Message:"Can't find user with id #42\n" + err.(structs.InternalError).Explain})
 		return
 	}
 	resp.SetStatus(201).SetContent(post)

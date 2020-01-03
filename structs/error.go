@@ -14,6 +14,7 @@ type Error struct {
 
 type InternalError struct {
 	E string
+	Explain string
 }
 
 func (e InternalError) Error() string {
