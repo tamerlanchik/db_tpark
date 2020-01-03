@@ -87,6 +87,7 @@ create table UsersInForum (
     forum citext
 );
 
+
 create or replace function users_forum() returns trigger as $users_forum$
     begin
         if NEW.forum IS NOT NULL then
@@ -258,4 +259,5 @@ create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
 create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
 
 create index if not exists forum_users_idx ON UsersInForum(forum);
+create unique index UsersInForum_idx ON UsersInForum(nickname, forum);
 cluster UsersInForum USING forum_users_idx;

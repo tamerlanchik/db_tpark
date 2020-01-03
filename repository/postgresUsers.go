@@ -69,8 +69,11 @@ func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, des
 	//			%s ORDER BY nickname %s %s;`
 
 	query := `SELECT about, email, fullname, nickname FROM Users
-				JOIN (SELECT DISTINCT nickname from UsersInForum WHERE forum=$1 %s) as l
+				JOIN (SELECT nickname from UsersInForum WHERE forum=$1 %s) as l
 					USING (nickname) ORDER BY nickname %s %s`
+	//query := `SELECT about, email, fullname, nickname FROM Users
+	//			JOIN UsersInForum as l USING (nickname)
+	//			WHERE forum=$1 %s ORDER BY nickname %s %s`
 	var cmpPlaceholder, limitPlaceholder, orderPlaceholder string
 	paramsCount := 1
 	params := make([]interface{}, 0)
