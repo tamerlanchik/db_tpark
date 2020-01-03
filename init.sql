@@ -260,5 +260,5 @@ create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
 create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
 
 create index if not exists forum_users_idx ON UsersInForum(forum);
-create unique index UsersInForum_idx ON UsersInForum(nickname, forum);
+create unique index UsersInForum_idx ON UsersInForum(forum, nickname);
 cluster UsersInForum USING forum_users_idx;
