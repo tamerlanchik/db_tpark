@@ -37,7 +37,7 @@ func garbageCOllectionTask(timeout int) {
 }
 
 func main() {
-	buildmode.LogTag = "log"
+	buildmode.LogTag = "no"
 	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
 	start := mux.NewRouter()
 	mainRouter := start.PathPrefix("/api").Subrouter()

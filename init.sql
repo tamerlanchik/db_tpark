@@ -55,10 +55,10 @@ CREATE TABLE Thread (
     votes INTEGER NOT NULL DEFAULT 0
 );
 
-create table ThreadVotes (
-    thread INTEGER NOT NULL,
-    votes INTEGER NOT NULL DEFAULT 0
-);
+-- create table ThreadVotes (
+--     thread INTEGER NOT NULL,
+--     votes INTEGER NOT NULL DEFAULT 0
+-- );
 
 -- _______Post___________
 CREATE OR REPLACE FUNCTION get_thread_by_post(post_ BIGINT) RETURNS INTEGER AS $get_post_thread$
@@ -195,11 +195,11 @@ CREATE OR REPLACE FUNCTION update_forum_threads() RETURNS trigger AS $update_for
     BEGIN
         IF TG_OP='INSERT' THEN
             UPDATE Forum SET threads=threads+1 WHERE slug=NEW.forum;
-            INSERT INTO ThreadVotes(thread, votes) VALUES (NEW.id, 0);
+--             INSERT INTO ThreadVotes(thread, votes) VALUES (NEW.id, 0);
             RETURN NEW;
         ELSIF TG_OP='DELETE' OR TG_OP='TRUNCATE' THEN
             UPDATE Forum SET threads=threads-1 WHERE slug=OLD.forum;
-            DELETE FROM ThreadVotes WHERE NEW.id=thread;
+--             DELETE FROM ThreadVotes WHERE NEW.id=thread;
             RETURN OLD;
         ELSIF TG_OP='UPDATE' THEN
             IF NEW.forum!=OLD.forum THEN
@@ -224,10 +224,12 @@ CREATE TRIGGER update_forum_threads AFTER UPDATE OR INSERT OR DELETE ON Thread
 CREATE OR REPLACE FUNCTION update_thread_vote_counter() RETURNS trigger AS $update_thread_vote_counter$
     BEGIN
         IF TG_OP='INSERT' THEN
-            UPDATE ThreadVotes SET votes=votes+NEW.vote WHERE thread=NEW.thread;
+--             UPDATE ThreadVotes SET votes=votes+NEW.vote WHERE thread=NEW.thread;
+            UPDATE Thread SET votes=votes+NEW.vote WHERE id=NEW.thread;
             RETURN NEW;
         ELSIF TG_OP='UPDATE' THEN
-            UPDATE ThreadVotes SET votes=votes+(NEW.vote-OLD.vote) WHERE thread=NEW.thread;
+--             UPDATE ThreadVotes SET votes=votes+(NEW.vote-OLD.vote) WHERE thread=NEW.thread;
+            UPDATE Thread SET votes=votes+(NEW.vote-OLD.vote) WHERE id=NEW.thread;
             RETURN NEW;
         ELSE
             RAISE EXCEPTION 'Invalid call update_thread_vote_counter()';
@@ -262,8 +264,9 @@ CREATE INDEX IF NOT EXISTS idx_sth ON Post (lower(author));
 CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
 create index IF NOT EXISTS thread_forum ON thread(forum);
+create index thread_forum_lower ON thread(lower(forum));
 create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
-create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
+-- create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
 
 create index if not exists forum_users_idx ON UsersInForum(forum);
 create unique index UsersInForum_idx ON UsersInForum(forum, nickname);

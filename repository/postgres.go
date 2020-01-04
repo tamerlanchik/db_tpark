@@ -17,8 +17,10 @@ const (
 	queryGetUserByNick=`SELECT email, nickname, fullname, about FROM Users WHERE nickname=$1`
 	queryGetPost=`SELECT author, created, forum, id, isEdited, message, coalesce(parent,0), thread FROM Post WHERE id=$1`
 	queryGetForum = `SELECT (SELECT ForumPosts.posts FROM ForumPosts WHERE ForumPosts.forum=slug), threads, title, usernick, slug FROM Forum WHERE slug=$1`
-	queryGetThread=`SELECT author, created, forum, id, message, slug, title, tv.votes FROM Thread 
-					JOIN ThreadVotes as tv on tv.thread=id WHERE id=$1`
+	//queryGetThread=`SELECT author, created, forum, id, message, slug, title, tv.votes FROM Thread
+	//				JOIN ThreadVotes as tv on tv.thread=id WHERE id=$1`
+	queryGetThread=`SELECT author, created, forum, id, message, slug, title, votes FROM Thread 
+					WHERE id=$1`
 )
 
 func NewPostgresRepo() *PostgresRepo {
@@ -47,7 +49,6 @@ func (r *PostgresRepo) ClearAll() error {
 	query := `
 			TRUNCATE ForumPosts;
 			TRUNCATE UsersInForum;
-			TRUNCATE ThreadVotes;
 			TRUNCATE TABLE vote CASCADE;
 			TRUNCATE TABLE Post CASCADE;
 			TRUNCATE TABLE Thread CASCADE;

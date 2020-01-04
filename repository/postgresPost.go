@@ -10,43 +10,32 @@ import (
 	"db_tpark/structs"
 	"fmt"
 	"math"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-func PrintMemUsage() {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
-	fmt.Printf("Alloc = %v MiB", m.Alloc)
-	fmt.Printf("\tTotalAlloc = %v MiB", m.TotalAlloc)
-	fmt.Printf("\tSys = %v MiB", m.Sys)
-	fmt.Printf("\tNumGC = %v\n", m.NumGC)
-}
-
 func init() {
-	mutexMap = make(map[string]*sync.Mutex)
+	//mutexMap = make(map[string]*sync.Mutex)
 	mutexMapMutex = sync.Mutex{}
 }
 
-func GetMutex(key string) {
-	mutex, ok := mutexMap[key]
-	if !ok {
-		mutex = &sync.Mutex{}
-		mutexMapMutex.Lock()
-		mutexMap[key]=mutex
-		mutexMapMutex.Unlock()
-	}
-	mutex.Lock()
-}
-func FreeMutex(key string) {
-	mutexMap[key].Unlock()
-}
+//func GetMutex(key string) {
+//	mutex, ok := mutexMap[key]
+//	if !ok {
+//		mutex = &sync.Mutex{}
+//		mutexMapMutex.Lock()
+//		mutexMap[key]=mutex
+//		mutexMapMutex.Unlock()
+//	}
+//	mutex.Lock()
+//}
+//func FreeMutex(key string) {
+//	mutexMap[key].Unlock()
+//}
 var postCounter int64
-var mutexMap map[string]*sync.Mutex
+//var mutexMap map[string]*sync.Mutex
 var mutexMapMutex sync.Mutex
 //var UsersForum map[string][]string
 func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
@@ -62,35 +51,19 @@ func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 
 func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAccount, error) {
 	var postAccount structs.PostAccount
-	//post, err := r.DB.Prepare(queryGetPost)
-	//if err != nil {
-	//	return postAccount, err
-	//}
 	var author, forum, thread *sql.Stmt
 	for _, key := range fields {
 		switch key {
 		case "user":
-			//author, err = r.DB.Prepare(queryGetUserByNick)
-			//if err != nil {
-			//	return postAccount, err
-			//}
 			author = &sql.Stmt{}
 			postAccount.Author = &structs.User{}
 			break
 		case "forum":
 			forum = &sql.Stmt{}
-			//forum, err = r.DB.Prepare(queryGetForum)
-			//if err != nil {
-			//	return postAccount, err
-			//}
 			postAccount.Forum = &structs.Forum{}
 			break
 		case "thread":
 			thread = &sql.Stmt{}
-			//thread, err = r.DB.Prepare(queryGetThread)
-			//if err != nil {
-			//	return postAccount, err
-			//}
 			postAccount.Thread = &structs.Thread{}
 			break
 		default:
@@ -121,6 +94,9 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 		}
 
 		if thread != nil {
+			//if err:=r.loadThreadVotes(); err != nil {
+			//	return err
+			//}
 			err = postAccount.Thread.
 				InflateFromSql(r.DB.QueryRow(context.Background(), queryGetThread, postAccount.Post.Thread))
 			if err != nil {
@@ -130,7 +106,6 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 		return nil
 	}
 
-	//err = sqlTools.WithTransaction(r.DB, task)
 	err := task()
 	return postAccount, err
 }
