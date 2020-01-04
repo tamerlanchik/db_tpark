@@ -56,17 +56,7 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 }
 
 func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
-	counter++
-	//buildmode.Log.Println(counter)
 	users := make([]structs.User, 0)
-	//query := `SELECT about, email, fullname, nickname FROM Users WHERE nickname IN (
-	//			(SELECT DISTINCT author FROM Thread WHERE forum=$1)
-	//			UNION
-	//			(SELECT DISTINCT author FROM Post WHERE forum=$1)
-	//			) %s ORDER BY nickname %s %s;`
-	//
-	//query = `SELECT nickname from UsersInForum WHERE forum=$1
-	//			%s ORDER BY nickname %s %s;`
 
 	query := `SELECT about, email, fullname, nickname FROM Users
 				JOIN (SELECT nickname from UsersInForum WHERE forum=$1 %s) as l
@@ -108,6 +98,11 @@ func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, des
 	if err != nil {
 		return users, err
 	}
+	defer func() {
+		rows.Close()
+		rows = nil
+	}()
+
 
 	for rows.Next(){
 		user := structs.User{}

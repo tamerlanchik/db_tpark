@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
+	"time"
+
+	//"time"
 )
 
 type PostgresRepo struct{
@@ -34,8 +37,8 @@ func (r *PostgresRepo) Init(user, pass, host, port, dbname string) error {
 	}
 
 	r.DB.SetMaxOpenConns(8)
-	r.DB.SetMaxIdleConns(4)
-
+	//r.DB.SetMaxIdleConns(4)
+	r.DB.SetConnMaxLifetime(time.Second*1)
 	return r.DB.Ping()
 }
 

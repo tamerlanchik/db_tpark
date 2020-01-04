@@ -19,8 +19,6 @@ type PostHandler struct {
 	repo repository.Repository
 }
 
-var GetPostCounter int
-var EditPostCounter int
 
 func NewPostHandler(repo repository.Repository) *PostHandler {
 	return &PostHandler{repo: repo}
@@ -32,9 +30,8 @@ func (h *PostHandler) InflateRouter(r *mux.Router) {
 }
 
 func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
-	tic := time.Now()
-	defer timeLogger.Write("/post/getDetails", tic)
-	GetPostCounter++
+	//tic := time.Now()
+	//defer timeLogger.Write("/post/getDetails", tic)
 	//buildmode.Log.Println("GetPostDetails", GetPostCounter)
 	//if GetPostCounter>=18{
 	//	//buildmode.Log.Println("GetPostDetails")
@@ -61,7 +58,10 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 		buildmode.Log.Println("Wrong param: ", "id")
 		return
 	}
+
 	posts, err := h.repo.GetPostAccount(idInt, related)
+	//buildmode.Log.Println("After GetPostDetails")
+	//PrintMemUsage()
 	if err != nil {
 		buildmode.Log.Println("Error in GetPostDetails: ", err)
 		resp.SetStatus(404).SetContent(structs.Error{Message:"Can't find user with id #42"})
@@ -77,11 +77,11 @@ func (h *PostHandler) GetPostDetails(w http.ResponseWriter, r *http.Request) {
 func (h *PostHandler) ChangePost(w http.ResponseWriter, r *http.Request) {
 	tic := time.Now()
 	defer timeLogger.Write("/post/change", tic)
-	EditPostCounter++
+	//EditPostCounter++
 	//buildmode.Log.Println("Edit post", EditPostCounter)
-	if EditPostCounter>=3 {
-		//buildmode.Log.Println("Edit post", EditPostCounter)
-	}
+	//if EditPostCounter>=3 {
+	//	//buildmode.Log.Println("Edit post", EditPostCounter)
+	//}
 	resp := HttpTools.NewResponse(w)
 	defer resp.Send()
 	debugCounter++;

@@ -5,6 +5,7 @@ import (
 	"db_tpark/handler"
 	"db_tpark/repository"
 	"fmt"
+	_ "net/http/pprof"
 	"runtime"
 	"time"
 
@@ -26,11 +27,22 @@ const (
 
 //	http://localhost:5000/api/thread/1857/create
 
+func garbageCOllectionTask(timeout int) {
+	ticker := time.NewTicker(time.Millisecond*time.Duration(timeout))
+	go func() {
+		for _ = range ticker.C {
+			runtime.GC()
+		}
+	}()
+}
+
 func main() {
-	buildmode.LogTag = "no"
+	buildmode.LogTag = "log"
 	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
-	//runtime.GOMAXPROCS(6)
-	mainRouter := mux.NewRouter().PathPrefix("/api").Subrouter()
+	//runtime.GOMAXPROCS(1)
+	garbageCOllectionTask(60000)
+	start := mux.NewRouter()
+	mainRouter := start.PathPrefix("/api").Subrouter()
 	if err:= InflateRouter(mainRouter); err !=nil {
 		fmt.Println("Error inflating router:", err)
 		if buildmode.BuildTag=="debug" {
@@ -43,6 +55,10 @@ func main() {
 	//	w.Write([]byte("This is a catch-all route"))
 	//	//buildmode.Log.Println("FF", r.URL)
 	//})
+
+	go http.ListenAndServe("localhost:5001", nil)
+
+	//start.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 	err := http.ListenAndServe(":"+port, mainRouter)
 	fmt.Println("Stop server: ", err)
 }
@@ -56,6 +72,19 @@ func InflateRouter(r *mux.Router) error {
 
 
 	repo := repository.NewPostgresRepo()
+
+	//timer := time.NewTicker(time.Second*10)
+	//go func() {
+	//	for _ = range timer.C{
+	//		repo.DB.Close()
+	//		err := repo.Init(dbuser, dbpass, dbhost, dbport, dbname)
+	//		if err != nil {
+	//			buildmode.Log.Println("Error during init postgres")
+	//			return
+	//		}
+	//	}
+	//}()
+
 	err := repo.Init(dbuser, dbpass, dbhost, dbport, dbname);
 	if err != nil {
 		//buildmode.Log.Println("Error during init postgres")
@@ -85,13 +114,30 @@ func InflateRouter(r *mux.Router) error {
 	return nil
 }
 
+var ttt int64
+
 func AddContentTypeMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			buildmode.Log.Println("Path: ", r.URL)
-			start := time.Now()
+			//ttt++
+			//start := time.Now()
+			//var m runtime.MemStats
+			//runtime.ReadMemStats(&m)
+			//// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+			//before := int64(m.Alloc)
 			next.ServeHTTP(w, r)
-			buildmode.Log.Println(r.URL, " ", time.Since(start))
+			//runtime.GC()
+			//runtime.ReadMemStats(&m)
+			//buildmode.Log.Println(r.URL, " ", time.Since(start))
+			//if (int64(m.Alloc)-before)/1024 > 100{
+			//	fmt.Println(	"Memory added: ", (int64(m.Alloc)-before)/1024)
+			//	if ttt%1000==0{
+			//		runtime.GC()
+			//		fmt.Println("Clear")
+			//	}
+			//}
+			//runtime.GC()
 		})
 
 	}

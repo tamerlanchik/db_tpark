@@ -85,6 +85,7 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 	}
 	query = fmt.Sprintf(query, placeholderSince, placeholderDesc, placeholderLimit)
 	rows, err = r.DB.Query(query, params...)
+	defer rows.Close()
 	if err != nil {
 		return threads, err
 	}

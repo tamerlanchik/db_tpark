@@ -5,6 +5,8 @@ import (
 	"db_tpark/repository"
 	"db_tpark/structs"
 	"fmt"
+	"runtime"
+
 	//"fmt"
 	"db_tpark/pkg/HttpTools"
 	"github.com/gorilla/mux"
@@ -45,6 +47,20 @@ func PrintMetrics() {
 			return res
 		}())
 	}
+}
+
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("Alloc = %v MiB", m.Alloc)
+	fmt.Printf("\tTotalAlloc = %v MiB", m.TotalAlloc)
+	fmt.Printf("\tSys = %v MiB", m.Sys)
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }
 
 var timeLogger Logger

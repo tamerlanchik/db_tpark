@@ -2,16 +2,28 @@ package repository
 
 import (
 	"database/sql"
+	//"db_tpark/buildmode"
 	"db_tpark/pkg/sqlTools"
 	"db_tpark/structs"
 	"fmt"
 	"github.com/jackc/pgconn"
 	"math"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("Alloc = %v MiB", m.Alloc)
+	fmt.Printf("\tTotalAlloc = %v MiB", m.TotalAlloc)
+	fmt.Printf("\tSys = %v MiB", m.Sys)
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+}
 
 func init() {
 	mutexMap = make(map[string]*sync.Mutex)
@@ -217,6 +229,7 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 
 
 	rows, err := r.DB.Query(query, params...)
+	defer rows.Close()
 	if err != nil || (rows!=nil && rows.Err()!=nil){
 		switch err.(*pgconn.PgError).Code {
 		default:
@@ -252,10 +265,10 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 }
 
 func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string, sort string, desc bool) ([]structs.Post, error) {
+
 	query := `SELECT author, forum, created, id, isEdited, message, coalesce(parent, 0), thread 
 				FROM Post 
 					WHERE thread=$1 %s ORDER BY %s %s`
-	//		WHERE thread=$1
 	threads := make([]structs.Post, 0)
 	threadId, err := r.getThreadId(threadKey)
 	if err != nil {
@@ -329,6 +342,7 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 		//buildmode.Log.Println(err)
 		return threads, err
 	}
+	defer rows.Close()
 
 	for rows.Next(){
 		thread := structs.Post{}
