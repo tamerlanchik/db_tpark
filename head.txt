@@ -1,0 +1,15 @@
+(pprof) top
+Showing nodes accounting for 370.64MB, 89.28% of 415.16MB total
+Dropped 54 nodes (cum <= 2.08MB)
+Showing top 10 nodes out of 75
+      flat  flat%   sum%        cum   cum%
+  119.64MB 28.82% 28.82%   140.14MB 33.76%  github.com/jackc/pgtype.NewConnInfo
+   57.74MB 13.91% 42.73%    57.74MB 13.91%  github.com/jackc/pgx.(*Conn).getRows
+   56.94MB 13.72% 56.44%    56.94MB 13.72%  github.com/jackc/chunkreader.(*ChunkReader).newBuf
+   39.30MB  9.47% 65.91%    39.30MB  9.47%  github.com/jackc/chunkreader.NewConfig
+   37.51MB  9.04% 74.94%    56.15MB 13.52%  github.com/jackc/pgconn.(*PgConn).Prepare
+   20.50MB  4.94% 79.88%    20.50MB  4.94%  github.com/jackc/pgtype.(*ConnInfo).RegisterDataType
+   17.46MB  4.21% 84.08%    17.46MB  4.21%  database/sql.(*DB).addDepLocked
+    7.55MB  1.82% 85.90%    63.70MB 15.34%  github.com/jackc/pgx.(*Conn).Prepare
+    7.50MB  1.81% 87.71%    80.11MB 19.30%  database/sql.(*DB).prepareDC
+    6.50MB  1.57% 89.28%   205.95MB 49.61%  github.com/jackc/pgx.connect
