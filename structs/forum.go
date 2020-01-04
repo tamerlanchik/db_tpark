@@ -1,6 +1,9 @@
 package structs
 
-import "database/sql"
+import (
+	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx"
+)
 
 type Forum struct {
 	Posts int64 `json:"posts"`
@@ -9,9 +12,9 @@ type Forum struct {
 	Title string `json:"title"`
 	User string `json:"user"`
 }
-func (f *Forum) InflateFromSql(row *sql.Row) error{
+func (f *Forum) InflateFromSql(row pgx.Row) error{
 	//	posts, threads, title, usernick
-	var slug sql.NullString
+	var slug pgtype.Text
 	err := row.Scan(
 		&f.Posts,
 		&f.Threads,

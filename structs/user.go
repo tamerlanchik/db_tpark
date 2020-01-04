@@ -1,6 +1,9 @@
 package structs
 
-import "database/sql"
+import (
+	//"database/sql"
+	"github.com/jackc/pgx"
+)
 
 type User struct {
 	About string `json:"about,omitempty"`
@@ -9,7 +12,7 @@ type User struct {
 	Nickname string `json:"nickname"`
 }
 
-func (u *User) InflateFromSql(row *sql.Row) error {
+func (u *User) InflateFromSql(row pgx.Row) error {
 	//	email, nickname, fullname, about
 	return row.Scan(
 			&u.Email,

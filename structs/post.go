@@ -1,7 +1,7 @@
 package structs
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx"
 	"time"
 )
 
@@ -23,7 +23,7 @@ type PostAccount struct {
 	Thread *Thread `json:"thread,omitempty"`
 }
 
-func (p *Post) InflateFromSql(row *sql.Row) error {
+func (p *Post) InflateFromSql(row pgx.Row) error {
 	var created time.Time
 	err := row.Scan(
 		&p.Author,

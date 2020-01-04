@@ -1,16 +1,15 @@
 package repository
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
+	"github.com/jackc/pgx/pgxpool"
 	_ "github.com/jackc/pgx/stdlib"
-	"time"
-
 	//"time"
 )
 
 type PostgresRepo struct{
-	DB *sql.DB
+	DB *pgxpool.Pool
 	queries map[int]string
 }
 
@@ -27,19 +26,21 @@ func NewPostgresRepo() *PostgresRepo {
 }
 
 func (r *PostgresRepo) Init(user, pass, host, port, dbname string) error {
-	dsnTemplate := "postgres://%s:%s@%s:%s/%s"
+	dsnTemplate := "postgres://%s:%s@%s:%s/%s?pool_max_conns=10"
 	dsn := fmt.Sprintf(dsnTemplate, user, pass, host, port, dbname)
 
 	var err error
-	r.DB, err = sql.Open("pgx", dsn)
+	//r.DB, err = sql.Open("pgx", dsn)
+	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return err
 	}
+	r.DB, err = pgxpool.ConnectConfig(context.Background(), poolConfig)
 
-	r.DB.SetMaxOpenConns(8)
+	//r.DB.SetMaxOpenConns(8)
 	//r.DB.SetMaxIdleConns(4)
-	r.DB.SetConnMaxLifetime(time.Second*1)
-	return r.DB.Ping()
+	//r.DB.SetConnMaxLifetime(time.Second*1)
+	return err
 }
 
 func (r *PostgresRepo) ClearAll() error {
@@ -53,7 +54,7 @@ func (r *PostgresRepo) ClearAll() error {
 			TRUNCATE TABLE Forum CASCADE;
 			TRUNCATE TABLE Users CASCADE;			
 		`
-	_, err := r.DB.Exec(query)
+	_, err := r.DB.Exec(context.Background(), query)
 	return err
 }
 
@@ -65,7 +66,7 @@ func (r *PostgresRepo) GetDBAccount() (map[string]int64, error) {
 							(SELECT COUNT(Forum.slug) AS forum FROM Forum) AS Forum,
 							(SELECT COUNT(Users.nickname) AS user FROM Users) AS Users;`
 	var posts, threads, forums, users int64
-	err := r.DB.QueryRow(query).Scan(&posts, &threads, &forums, &users)
+	err := r.DB.QueryRow(context.Background(), query).Scan(&posts, &threads, &forums, &users)
 	res := make(map[string]int64, 4)
 	res["forum"] = forums
 	res["thread"] = threads

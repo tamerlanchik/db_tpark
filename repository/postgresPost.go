@@ -1,12 +1,14 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
+	"github.com/jackc/pgtype"
+
 	//"db_tpark/buildmode"
 	"db_tpark/pkg/sqlTools"
 	"db_tpark/structs"
 	"fmt"
-	"github.com/jackc/pgconn"
 	"math"
 	"runtime"
 	"strconv"
@@ -51,7 +53,7 @@ func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 	query := queryGetPost
 	var post structs.Post
 	var created time.Time
-	err := r.DB.QueryRow(query, id).
+	err := r.DB.QueryRow(context.Background(), query, id).
 		Scan(&post.Author, &created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
 	post.Created = created.Format(structs.OutTimeFormat)
 	post.ChangeParent()
@@ -60,32 +62,35 @@ func (r *PostgresRepo) GetPost(id int64) (structs.Post, error) {
 
 func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAccount, error) {
 	var postAccount structs.PostAccount
-	post, err := r.DB.Prepare(queryGetPost)
-	if err != nil {
-		return postAccount, err
-	}
+	//post, err := r.DB.Prepare(queryGetPost)
+	//if err != nil {
+	//	return postAccount, err
+	//}
 	var author, forum, thread *sql.Stmt
 	for _, key := range fields {
 		switch key {
 		case "user":
-			author, err = r.DB.Prepare(queryGetUserByNick)
-			if err != nil {
-				return postAccount, err
-			}
+			//author, err = r.DB.Prepare(queryGetUserByNick)
+			//if err != nil {
+			//	return postAccount, err
+			//}
+			author = &sql.Stmt{}
 			postAccount.Author = &structs.User{}
 			break
 		case "forum":
-			forum, err = r.DB.Prepare(queryGetForum)
-			if err != nil {
-				return postAccount, err
-			}
+			forum = &sql.Stmt{}
+			//forum, err = r.DB.Prepare(queryGetForum)
+			//if err != nil {
+			//	return postAccount, err
+			//}
 			postAccount.Forum = &structs.Forum{}
 			break
 		case "thread":
-			thread, err = r.DB.Prepare(queryGetThread)
-			if err != nil {
-				return postAccount, err
-			}
+			thread = &sql.Stmt{}
+			//thread, err = r.DB.Prepare(queryGetThread)
+			//if err != nil {
+			//	return postAccount, err
+			//}
 			postAccount.Thread = &structs.Thread{}
 			break
 		default:
@@ -95,26 +100,29 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 
 
 	task := func() error {
-		err := postAccount.Post.InflateFromSql(post.QueryRow(id))
+		err := postAccount.Post.InflateFromSql(r.DB.QueryRow(context.Background(), queryGetPost, id))
 		if err != nil {
 			return err
 		}
 
 		if author != nil {
-			err = postAccount.Author.InflateFromSql(author.QueryRow(postAccount.Post.Author))
+			err = postAccount.Author.
+				InflateFromSql(r.DB.QueryRow(context.Background(), queryGetUserByNick, postAccount.Post.Author))
 			if err != nil {
 				return err
 			}
 		}
 		if forum != nil {
-			err = postAccount.Forum.InflateFromSql(forum.QueryRow(postAccount.Post.Forum))
+			err = postAccount.Forum.
+				InflateFromSql(r.DB.QueryRow(context.Background(), queryGetForum, postAccount.Post.Forum))
 			if err != nil {
 				return err
 			}
 		}
 
 		if thread != nil {
-			err = postAccount.Thread.InflateFromSql(thread.QueryRow(postAccount.Post.Thread))
+			err = postAccount.Thread.
+				InflateFromSql(r.DB.QueryRow(context.Background(), queryGetThread, postAccount.Post.Thread))
 			if err != nil {
 				return err
 			}
@@ -122,7 +130,8 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 		return nil
 	}
 
-	err = sqlTools.WithTransaction(r.DB, task)
+	//err = sqlTools.WithTransaction(r.DB, task)
+	err := task()
 	return postAccount, err
 }
 
@@ -146,10 +155,11 @@ func (r *PostgresRepo) EditPost(id int64, newPost structs.Post) error {
 		return nil
 	}
 	query = fmt.Sprintf(query, strings.Join(set, ", "))
-	err := sqlTools.WithTransaction(r.DB, func() error {
-		_, err := r.DB.Exec(query, params...)
-		return err
-	})
+	_, err := r.DB.Exec(context.Background(), query, params...)
+	//err := sqlTools.WithTransaction(r.DB, func() error {
+	//	_, err := r.DB.Exec(context.Background(), query, params...)
+	//	return err
+	//})
 	return err
 }
 
@@ -161,14 +171,14 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	}
 
 	var cnt int64;
-	if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+	if row:=r.DB.QueryRow(context.Background(), `SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
 		return posts, structs.InternalError{E: structs.ErrorNoThread}
 	}
 	if len(posts) == 0 {
 		return posts, nil
 	}
 	var forumSlug string
-	err = r.DB.QueryRow(`SELECT forum FROM Thread WHERE Thread.id=$1`, threadId).Scan(&forumSlug)
+	err = r.DB.QueryRow(context.Background(), `SELECT forum FROM Thread WHERE Thread.id=$1`, threadId).Scan(&forumSlug)
 	if err!=nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
@@ -189,7 +199,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	}
 
 	query := `UPDATE ForumPosts SET posts=posts+$2 WHERE forum=$1;`
-	_, err = r.DB.Exec(query, forumSlug, len(posts))
+	_, err = r.DB.Exec(context.Background(), query, forumSlug, len(posts))
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
@@ -204,7 +214,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	//defer FreeMutex(forumSlug)
 	mutexMapMutex.Lock()
 	defer mutexMapMutex.Unlock()
-	_, err = r.DB.Exec(query, params...)
+	_, err = r.DB.Exec(context.Background(), query, params...)
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
@@ -214,11 +224,18 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, posts []structs.Post, created time.Time) ([]structs.Post, error) {
 	var params []interface{}
 	for _, post := range posts {
-		var parent sql.NullInt64;
-		parent.Int64 = post.Parent;
+		var parent sql.NullInt64
+		parent.Int64=post.Parent
 		if post.Parent!=0 {
-			parent.Valid = true;
+			parent.Valid=true
 		}
+		//var parent pgtype.Int8;
+		//parent.Int = post.Parent;
+		//if post.Parent!=0 {
+		//	parent.Status = pgtype.Present
+		//} else {
+		//	parent.Status = pgtype.Null
+		//}
 		params = append(params, post.Author, post.Message, parent, threadId, created, forumSLug)
 	}
 
@@ -228,13 +245,13 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 	query = sqlTools.CreatePacketQuery(query, 6, len(posts), postfix)
 
 
-	rows, err := r.DB.Query(query, params...)
+	rows, err := r.DB.Query(context.Background(), query, params...)
 	defer rows.Close()
 	if err != nil || (rows!=nil && rows.Err()!=nil){
-		switch err.(*pgconn.PgError).Code {
-		default:
+		//switch err.(*pgconn.PgError).Code {
+		//default:
 			return posts, structs.InternalError{E:"Unknown error", Explain:err.Error()}
-		}
+		//}
 	}
 	i := 0
 	for rows.Next() {
@@ -252,9 +269,9 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 	var cnt int64;
 	if i==0 && len(posts) > 0{
 		// looking for exact error
-		if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
+		if row:=r.DB.QueryRow(context.Background(), `SELECT count(id) from Thread WHERE id=$1;`, threadId); row.Scan(&cnt)!=nil || cnt==0 {
 			return posts, structs.InternalError{E: structs.ErrorNoThread}
-		} else if row:= r.DB.QueryRow(`SELECT COUNT(nickname) FROM Users WHERE nickname=$1`, posts[0].Author); row.Scan(&cnt)!=nil || cnt==0 {
+		} else if row:= r.DB.QueryRow(context.Background(), `SELECT COUNT(nickname) FROM Users WHERE nickname=$1`, posts[0].Author); row.Scan(&cnt)!=nil || cnt==0 {
 			return posts, structs.InternalError{E: structs.ErrorNoThread}
 
 		}else{
@@ -275,7 +292,6 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 		return threads, err
 	}
 
-	var rows *sql.Rows
 	params := make([]interface{}, 0,2)
 	params = append(params, threadId)
 	var placeholderSince, placeholderDesc, placeholderLimit string
@@ -337,7 +353,7 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 		order := fmt.Sprintf(`path[1] %s, path`, placeholderDesc)
 		query = fmt.Sprintf(query, condition, order, "")
 	}
-	rows, err = r.DB.Query(query, params...)
+	rows, err := r.DB.Query(context.Background(), query, params...)
 	if err != nil {
 		//buildmode.Log.Println(err)
 		return threads, err
@@ -357,8 +373,8 @@ func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string
 		threads = append(threads, thread)
 	}
 	if len(threads) == 0 {
-		var sl sql.NullString
-		err = r.DB.QueryRow(`SELECT slug from thread WHERE id=$1`, threadId).Scan(&sl)
+		var sl pgtype.Text
+		err = r.DB.QueryRow(context.Background(), `SELECT slug from thread WHERE id=$1`, threadId).Scan(&sl)
 		if err != nil {
 			return threads, err
 		}

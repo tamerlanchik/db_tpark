@@ -39,8 +39,6 @@ func garbageCOllectionTask(timeout int) {
 func main() {
 	buildmode.LogTag = "log"
 	fmt.Println("Start server ", runtime.GOMAXPROCS(0))
-	//runtime.GOMAXPROCS(1)
-	garbageCOllectionTask(60000)
 	start := mux.NewRouter()
 	mainRouter := start.PathPrefix("/api").Subrouter()
 	if err:= InflateRouter(mainRouter); err !=nil {
@@ -49,14 +47,7 @@ func main() {
 			return
 		}
 	}
-	//buildmode.Log.Println("Router inflated")
-
-	//mainRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	//	w.Write([]byte("This is a catch-all route"))
-	//	//buildmode.Log.Println("FF", r.URL)
-	//})
-
-	go http.ListenAndServe("localhost:5001", nil)
+	//go http.ListenAndServe("localhost:5001", nil)
 
 	//start.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 	err := http.ListenAndServe(":"+port, mainRouter)
@@ -72,19 +63,6 @@ func InflateRouter(r *mux.Router) error {
 
 
 	repo := repository.NewPostgresRepo()
-
-	//timer := time.NewTicker(time.Second*10)
-	//go func() {
-	//	for _ = range timer.C{
-	//		repo.DB.Close()
-	//		err := repo.Init(dbuser, dbpass, dbhost, dbport, dbname)
-	//		if err != nil {
-	//			buildmode.Log.Println("Error during init postgres")
-	//			return
-	//		}
-	//	}
-	//}()
-
 	err := repo.Init(dbuser, dbpass, dbhost, dbport, dbname);
 	if err != nil {
 		//buildmode.Log.Println("Error during init postgres")

@@ -1,7 +1,8 @@
 package structs
 
 import (
-	"database/sql"
+	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx"
 	"time"
 )
 
@@ -16,10 +17,10 @@ type Thread struct {
 	Votes int32		`json:"votes,omitempty"`
 }
 
-func (t *Thread) InflateFromSql(row *sql.Row) error {
+func (t *Thread) InflateFromSql(row pgx.Row) error {
 	//	author, created, forum, id, message, slug, title, votes
 	var created time.Time
-	var slug sql.NullString
+	var slug pgtype.Text
 	err :=  row.Scan(
 			&t.Author,
 			&created,

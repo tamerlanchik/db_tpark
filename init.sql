@@ -42,11 +42,12 @@ create table ForumPosts (
     posts INTEGER DEFAULT 0
 );
 
+
 -- _______Thread__________
 CREATE TABLE Thread (
     author CITEXT REFERENCES Users (nickname) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    forum CITEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT,
+    forum CITEXT REFERENCES Forum (slug) ON DELETE CASCADE ON UPDATE RESTRICT not null,
     id SERIAL PRIMARY KEY,
     message TEXT NOT NULL,
     slug CITEXT UNIQUE CONSTRAINT slug_correct CHECK(slug ~ '^(\d|\w|-|_)*(\w|-|_)(\d|\w|-|_)*$'),

@@ -1,27 +1,34 @@
 package repository
 
 import (
-	"database/sql"
+	"context"
 	"db_tpark/buildmode"
 	"db_tpark/structs"
 	"fmt"
 	pg "github.com/jackc/pgconn"
+	"github.com/jackc/pgtype"
 	"strconv"
 	"strings"
 	"time"
 )
 
+var CreateThreadCounter int
 
 func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, error) {
+	CreateThreadCounter++
+	fmt.Println(CreateThreadCounter)
+	if CreateThreadCounter>=77{
+		fmt.Println("a")
+	}
 	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES 
 					($1, 
 					(SELECT slug from Forum WHERE lower(slug)=lower($2)),
 					$3, COALESCE($4, NOW())::timestamptz, $5, NULLIF($6, ''))
 				RETURNING id, slug, 0, forum`
 
-	var slug sql.NullString
+	var slug pgtype.Text
 	t, _ := time.Parse(structs.OutTimeFormat, thread.Created)
-	err := r.DB.QueryRow(query, thread.Author, thread.Forum, thread.Message, t, thread.Title, thread.Slug).
+	err := r.DB.QueryRow(context.Background(), query, thread.Author, thread.Forum, thread.Message, t, thread.Title, thread.Slug).
 			Scan(&thread.Id, &slug, &thread.Votes, &thread.Forum)
 	thread.Slug = slug.String
 
@@ -40,7 +47,8 @@ func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, erro
 				err = structs.InternalError{E: structs.ErrorDuplicateKey}
 				break
 			default:
-				//buildmode.Log.Println(e.Code)
+				buildmode.Log.Println(e.Code)
+				err = structs.InternalError{E: structs.ErrorNoForum}
 			}
 		} else {
 			err = structs.InternalError{E: structs.ErrorNoForum}
@@ -64,7 +72,6 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 	query := `SELECT author, forum, created, id, message, slug, title, tv.votes FROM Thread 
 					JOIN ThreadVotes as tv on tv.thread=id WHERE lower(forum)=lower($1) %s ORDER BY created %s %s`
 
-	var rows *sql.Rows
 	var err error
 	params := make([]interface{}, 0,2)
 	params = append(params, forumSlug)
@@ -84,14 +91,14 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 		placeholderLimit = `LIMIT $`+strconv.Itoa(len(params))
 	}
 	query = fmt.Sprintf(query, placeholderSince, placeholderDesc, placeholderLimit)
-	rows, err = r.DB.Query(query, params...)
+	rows, err := r.DB.Query(context.Background(), query, params...)
 	defer rows.Close()
 	if err != nil {
 		return threads, err
 	}
 
 	var created time.Time
-	var slug sql.NullString
+	var slug pgtype.Text
 	for rows.Next(){
 		thread := structs.Thread{}
 		err := rows.Scan(&thread.Author, &thread.Forum, &created, &thread.Id, &thread.Message, &slug, &thread.Title, &thread.Votes)
@@ -103,8 +110,8 @@ func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, d
 		threads = append(threads, thread)
 	}
 	if len(threads) == 0 {
-		var sl sql.NullString
-		err = r.DB.QueryRow(`SELECT slug from Forum WHERE lower(slug)=lower($1)`, forumSlug).Scan(&sl)
+		var sl pgtype.Text
+		err = r.DB.QueryRow(context.Background(), `SELECT slug from Forum WHERE lower(slug)=lower($1)`, forumSlug).Scan(&sl)
 		if err != nil {
 			return threads, err
 		}
@@ -145,7 +152,7 @@ func (r *PostgresRepo) EditThread(thread structs.Thread) (error) {
 		return nil
 	}
 	query = fmt.Sprintf(query, strings.Join(set, ", "), keyName)
-	_, err := r.DB.Exec(query, params...)
+	_, err := r.DB.Exec(context.Background(), query, params...)
 
 	return err
 }
@@ -160,30 +167,11 @@ func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int)
 			return err
 		}
 	}
-	//var oldVote int
-	//err := r.DB.QueryRow(`SELECT coalesce(votes, 0) FROM vote WHERE vote.thread=$1 AND vote.author=$2`,
-	//		id, user).Scan(&oldVote)
-	//
-	//query := `DELETE FROM Vote WHERE thread=$1 and author=$2`
-	//_, err = r.DB.Exec(query, id, user)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//query = `INSERT INTO Vote (thread, author, vote) VALUES ($1, $2, $3);`
-	//_, err = r.DB.Exec(query, id, user, voice)
-	//if err != nil {
-	//	return err
-	//}
-	//query = `UPDATE ThreadVotes SET votes=votes+$2 WHERE thread=$1;`
-	//_, err =r.DB.Exec(query, id, voice-oldVote);
-	//return err
-
 
 	query := `INSERT INTO vote(thread, author, vote) VALUES ($1, $2, $3)
                ON CONFLICT ON CONSTRAINT vote_thread_author_key DO
            UPDATE SET vote=$3 WHERE vote.thread=$1 AND lower(vote.author)=lower($2)`
-	_, err := r.DB.Exec(query, id, user, voice)
+	_, err := r.DB.Exec(context.Background(), query, id, user, voice)
 	return err
 }
 
@@ -197,7 +185,7 @@ func (r *PostgresRepo) getThreadId(threadKey interface{}) (int64, error) {
 		return threadId, nil
 	}
 	query := `SELECT id FROM Thread WHERE lower(slug)=lower($1)`
-	err := r.DB.QueryRow(query, threadKey.(string)).Scan(&threadId)
+	err := r.DB.QueryRow(context.Background(), query, threadKey.(string)).Scan(&threadId)
 	if err != nil {
 		return -1, err
 	}
@@ -212,20 +200,20 @@ func (r *PostgresRepo) getThreadById(id int64) (structs.Thread, error) {
 				FROM Thread WHERE id=$1`
 
 	var created time.Time
-	var slug sql.NullString
-	err := r.DB.QueryRow(query, id).
+	var slug pgtype.Text
+	err := r.DB.QueryRow(context.Background(), query, id).
 		Scan(&thread.Author, &created, &thread.Forum,
 			&thread.Id, &thread.Message, &slug, &thread.Title, &thread.Votes)
 	thread.Created = created.Format(structs.OutTimeFormat)
-	if slug.Valid {
+	//if slug.Status {
 		thread.Slug = slug.String
-	}
+	//}
 	return thread, err
 }
 
 func (r *PostgresRepo) checkThreadExists(id interface{}) error{
 	var cnt int64;
-	if row:=r.DB.QueryRow(`SELECT count(id) from Thread WHERE id=$1;`, id); row.Scan(&cnt)!=nil || cnt==0 {
+	if row:=r.DB.QueryRow(context.Background(), `SELECT count(id) from Thread WHERE id=$1;`, id); row.Scan(&cnt)!=nil || cnt==0 {
 		return structs.InternalError{E: structs.ErrorNoThread}
 	}
 	return nil

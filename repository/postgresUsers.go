@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"database/sql"
+	"context"
 	"db_tpark/structs"
 	"fmt"
 	"github.com/jackc/pgconn"
@@ -11,7 +11,7 @@ var counter int64
 
 func (r *PostgresRepo) AddUser(user structs.User) error {
 	query := `INSERT INTO Users (email, nickname, fullname, about) VALUES($1, $2, $3, $4);`
-	_, err := r.DB.Exec(query, user.Email, user.Nickname, user.Fullname, user.About)
+	_, err := r.DB.Exec(context.Background(), query, user.Email, user.Nickname, user.Fullname, user.About)
 	return err
 }
 
@@ -29,7 +29,7 @@ func (r *PostgresRepo) GetUser(email, nickname string) (structs.User, error) {
 		return user, fmt.Errorf("Empty params")
 	}
 
-	err := r.DB.QueryRow(query, param).Scan(&user.Email, &user.Nickname, &user.Fullname, &user.About)
+	err := r.DB.QueryRow(context.Background(), query, param).Scan(&user.Email, &user.Nickname, &user.Fullname, &user.About)
 	return user, err
 }
 
@@ -42,7 +42,7 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 	}
 	query = fmt.Sprintf(query, statements...)
 
-	_, err := r.DB.Exec(query, user.Email, user.Fullname, user.About, user.Nickname)
+	_, err := r.DB.Exec(context.Background(), query, user.Email, user.Fullname, user.About, user.Nickname)
 	if err != nil {
 		switch err.(*pgconn.PgError).Code{
 		case "23505":
@@ -90,17 +90,15 @@ func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, des
 	}
 	query = fmt.Sprintf(query, cmpPlaceholder, orderPlaceholder, limitPlaceholder)
 
-	var rows *sql.Rows
 	var err error
 	//buildmode.Log.Println(query)
 	//buildmode.Log.Println(forumSlug, since, limit)
-	rows, err = r.DB.Query(query, params...)
+	rows, err := r.DB.Query(context.Background(), query, params...)
 	if err != nil {
 		return users, err
 	}
 	defer func() {
 		rows.Close()
-		rows = nil
 	}()
 
 
