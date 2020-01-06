@@ -248,23 +248,29 @@ $get_thread_id_by_slug$ LANGUAGE plpgsql;
 
 CREATE UNIQUE INDEX users_nickname_index on Users (LOWER(nickname));
 CREATE UNIQUE INDEX forum_slug_index on Forum (LOWER(slug));
--- CREATE INDEX IF NOT EXISTS post_path_id ON Post (id, (path[1]));
--- CREATE INDEX IF NOT EXISTS post_path ON Post (path);
--- CREATE INDEX IF NOT EXISTS post_path_1 ON Post ((path[1]));
--- CREATE INDEX IF NOT EXISTS post_thread_id ON Post (thread, id);
--- CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
--- CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
--- CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
+
+--     CREATE INDEX IF NOT EXISTS post_path_id ON Post (id, (path[1]));
+--     CREATE INDEX IF NOT EXISTS post_path ON Post (path);
+--     CREATE INDEX IF NOT EXISTS post_path_1 ON Post ((path[1]));
+--     CREATE INDEX IF NOT EXISTS post_thread_id ON Post (thread, id);
+--     CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
+--     CREATE INDEX IF NOT EXISTS post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
+--     CREATE INDEX IF NOT EXISTS post_author_forum ON Post (author, forum);
+
 create index IF NOT EXISTS post__thread ON Post(thread);
 create index IF NOT EXISTS post__id_thread ON post(id, thread);
 create index IF NOT EXISTS post__path__first ON Post((path[1]));
 create index IF NOT EXISTS post_forum_author ON post(forum, author);
+
+create index post_parent_thread_path_id ON Post(thread, (path[1]), id) WHERE parent IS NUll;
+
 CREATE INDEX IF NOT EXISTS idx_sth ON Post (lower(author));
 
 CREATE UNIQUE INDEX thread_slug_index on Thread (LOWER(slug));
 CREATE INDEX IF NOT EXISTS thread_author ON Thread (lower(author));
 create index IF NOT EXISTS thread_forum ON thread(forum);
-create index thread_forum_lower ON thread(lower(forum));
+-- create index thread_forum_lower ON thread(lower(forum));
+create index IF NOT EXISTS thread_forum_created on Thread(lower(forum), created);
 create index IF NOT EXISTS vote_coverable On Vote(thread, lower(author), vote);
 -- create index IF NOT EXISTS tv_thread_votes ON threadvotes(thread, votes);
 

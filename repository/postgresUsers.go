@@ -1,13 +1,31 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"db_tpark/structs"
 	"fmt"
 	"github.com/jackc/pgconn"
+	"text/template"
 )
 
 var counter int64
+var getForumUsersTemplate *template.Template
+const (
+	queryTemplateGetForumUsers = `SELECT about, email, fullname, nickname FROM Users
+				JOIN (SELECT nickname from UsersInForum WHERE forum=$1 
+					{{.Since}} ORDER BY nickname {{.Desc}} {{.Limit}}) as l
+					USING (nickname) ORDER BY nickname {{.Desc}}`
+)
+
+func init() {
+	var err error
+	getForumUsersTemplate, err = template.New("getForumUsers").Parse(queryTemplateGetForumUsers)
+	if err != nil {
+		fmt.Println("Error: cannot create getForumUsersTemplate template: ", err)
+		panic(err)
+	}
+}
 
 func (r *PostgresRepo) AddUser(user structs.User) error {
 	query := `INSERT INTO Users (email, nickname, fullname, about) VALUES($1, $2, $3, $4);`
@@ -55,44 +73,51 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 	return err
 }
 
+// Users of forum
 func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
 	users := make([]structs.User, 0)
 
-	query := `SELECT about, email, fullname, nickname FROM Users
-				JOIN (SELECT nickname from UsersInForum WHERE forum=$1 %s) as l
-					USING (nickname) ORDER BY nickname %s %s`
 	//query := `SELECT about, email, fullname, nickname FROM Users
-	//			JOIN UsersInForum as l USING (nickname)
-	//			WHERE forum=$1 %s ORDER BY nickname %s %s`
-	var cmpPlaceholder, limitPlaceholder, orderPlaceholder string
+	//			JOIN (SELECT nickname from UsersInForum WHERE forum=$1 %s ORDER BY nickname %s %s) as l
+	//				USING (nickname) ORDER BY nickname %s`
+
+	templateArgs := struct {
+		Since string
+		Limit string
+		Desc string
+	}{}
+
+	//var cmpPlaceholder, limitPlaceholder, orderPlaceholder string
 	paramsCount := 1
 	params := make([]interface{}, 0)
 	params = append(params, forumSlug)
 	if desc {
 		if since!="" {
-			cmpPlaceholder = `AND nickname<$2`
+			templateArgs.Since = `AND nickname<$2`
 			paramsCount++
 			params = append(params, since)
 		}
-		orderPlaceholder = "DESC"
+		templateArgs.Desc = "DESC"
 	}else{
 		if since!="" {
-			cmpPlaceholder = `AND nickname>$2`
+			templateArgs.Since = `AND nickname>$2`
 			paramsCount++
 			params = append(params, since)
 		}
-		orderPlaceholder = "ASC"
+		templateArgs.Desc = "ASC"
 	}
 	if limit!=0 {
 		paramsCount++
-		limitPlaceholder = fmt.Sprintf(`LIMIT $%d`, paramsCount)
+		templateArgs.Limit = fmt.Sprintf(`LIMIT $%d`, paramsCount)
 		params = append(params, limit)
 	}
-	query = fmt.Sprintf(query, cmpPlaceholder, orderPlaceholder, limitPlaceholder)
-
-	var err error
-	//buildmode.Log.Println(query)
-	//buildmode.Log.Println(forumSlug, since, limit)
+	//query = fmt.Sprintf(query, cmpPlaceholder, orderPlaceholder, limitPlaceholder)
+	queryBuf := &bytes.Buffer{}
+	err := getForumUsersTemplate.Execute(queryBuf, templateArgs)
+	if err != nil {
+		return users, err
+	}
+	query := queryBuf.String()
 	rows, err := r.DB.Query(context.Background(), query, params...)
 	if err != nil {
 		return users, err
