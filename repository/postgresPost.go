@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"sync/atomic"
+
 	//"db_tpark/buildmode"
 	"db_tpark/pkg/sqlTools"
 	"db_tpark/structs"
@@ -85,6 +87,9 @@ func (r *PostgresRepo) GetPostAccount(id int64, fields []string) (structs.PostAc
 			}
 		}
 		if forum != nil {
+			if err:=r.loadForumPosts(); err != nil {
+				return err
+			}
 			err = postAccount.Forum.
 				InflateFromSql(r.DB.QueryRow(context.Background(), queryGetForum, postAccount.Post.Forum))
 			if err != nil {
@@ -177,6 +182,7 @@ func (r *PostgresRepo) CreatePost(thread interface{}, posts []structs.Post) ([]s
 	if err != nil {
 		return posts, structs.InternalError{E: structs.ErrorNoThread, Explain:err.Error()}
 	}
+	atomic.AddInt32(&forumPostsAccess.hasNewUpdates, 1)
 	prefix := `INSERT INTO UsersInForum(nickname, forum) VALUES `
 	postfix := `ON CONFLICT DO NOTHING`
 	query = sqlTools.CreatePacketQuery(prefix, 2, len(userList), postfix)
@@ -254,114 +260,3 @@ func (r *PostgresRepo) createPostsByPacket(threadId int64, forumSLug string, pos
 	}
 	return posts, nil
 }
-
-// sort three types
-//func (r *PostgresRepo) GetPosts(threadKey interface{}, limit int64, since string, sort string, desc bool) ([]structs.Post, error) {
-//	//query := `SELECT author, forum, created, id, isEdited, message, coalesce(parent, 0), thread
-//	//			FROM Post
-//	//				WHERE thread=$1 %s ORDER BY %s %s`
-//	query := `SELECT author, forum, created, id, isEdited, message, coalesce(parent, 0), thread
-//				FROM Post
-//					%s ORDER BY %s %s`
-//	threads := make([]structs.Post, 0)
-//	threadId, err := r.getThreadId(threadKey)
-//	if err != nil {
-//		return threads, err
-//	}
-//
-//	params := make([]interface{}, 0,2)
-//	params = append(params, threadId)
-//	var placeholderSince, placeholderDesc, placeholderLimit string
-//	if desc {
-//		placeholderDesc = "DESC"
-//	} else {
-//		placeholderDesc = "ASC"
-//	}
-//
-//	if limit != 0 {
-//		params = append(params, limit)
-//		placeholderLimit = `LIMIT $`+strconv.Itoa(len(params))
-//	}
-//	if since != "" {
-//		params = append(params, since)
-//		var compareSign string
-//		if desc {
-//			compareSign = "<"
-//		} else {
-//			compareSign = ">"
-//		}
-//		paramNum := len(params)
-//		queryGetPath := `SELECT %s FROM post AS since WHERE since.id=%s`
-//		switch sort {
-//		case "flat":
-//			placeholderSince = fmt.Sprintf(`AND id%s$%d`, compareSign, paramNum)
-//		case "tree":
-//			placeholderSince = fmt.Sprintf(
-//				`AND path%s(%s)`,
-//				compareSign,
-//				fmt.Sprintf(queryGetPath, `since.path`, fmt.Sprintf(`$%d`, paramNum)),
-//			)
-//		case "parent_tree":
-//			placeholderSince = fmt.Sprintf(
-//				`AND parents.path[1]%s(%s)`,
-//				compareSign,
-//				fmt.Sprintf(queryGetPath, `since.path[1]`, fmt.Sprintf(`$%d`, paramNum)),
-//			)
-//		}
-//	}
-//	switch sort {
-//	case "flat":
-//		condition := placeholderSince
-//		order := fmt.Sprintf(`(created, id) %s`, placeholderDesc)
-//		query = fmt.Sprintf(query, condition, order, placeholderLimit)
-//	case "tree":
-//		order := fmt.Sprintf(`(path, created) %s`, placeholderDesc)
-//		query = fmt.Sprintf(query, placeholderSince, order, placeholderLimit)
-//	case "parent_tree":
-//		//condition := fmt.Sprintf(
-//		//	`AND path[1] IN (
-//		//				SELECT parents.id FROM post AS parents
-//		//				WHERE parents.thread=post.thread AND parents.parent IS NULL %s
-//		//				ORDER BY parents.path[1] %s
-//		//				%s
-//		//				)`,
-//		condition := fmt.Sprintf(
-//			`AND path[1] IN (
-//						SELECT parents.id FROM post AS parents
-//						WHERE parents.thread=$1 AND parents.parent IS NULL %s
-//						ORDER BY parents.path[1] %s
-//						%s
-//						)`,
-//			placeholderSince, placeholderDesc, placeholderLimit,
-//		)
-//		order := fmt.Sprintf(`path[1] %s, path`, placeholderDesc)
-//		query = fmt.Sprintf(query, condition, order, "")
-//	}
-//	rows, err := r.DB.Query(context.Background(), query, params...)
-//	if err != nil {
-//		//buildmode.Log.Println(err)
-//		return threads, err
-//	}
-//	defer rows.Close()
-//
-//	for rows.Next(){
-//		thread := structs.Post{}
-//		var created time.Time
-//		err := rows.Scan(&thread.Author, &thread.Forum, &created, &thread.Id, &thread.IsEdited, &thread.Message, &thread.Parent, &thread.Thread)
-//		thread.Created = created.Format(structs.OutTimeFormat)
-//		thread.ChangeParent()
-//		if err != nil {
-//			//buildmode.Log.Println(err)
-//			return threads, err
-//		}
-//		threads = append(threads, thread)
-//	}
-//	if len(threads) == 0 {
-//		var sl pgtype.Text
-//		err = r.DB.QueryRow(context.Background(), `SELECT slug from thread WHERE id=$1`, threadId).Scan(&sl)
-//		if err != nil {
-//			return threads, err
-//		}
-//	}
-//	return threads, nil
-//}

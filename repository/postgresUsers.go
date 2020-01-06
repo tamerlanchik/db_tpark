@@ -69,25 +69,18 @@ func (r *PostgresRepo) EditUser(user structs.User) error {
 			return structs.InternalError{E:structs.ErrorNoUser}
 		}
 	}
-	//buildmode.Log.Println("a")
 	return err
 }
 
 // Users of forum
 func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, desc bool) ([]structs.User, error) {
 	users := make([]structs.User, 0)
-
-	//query := `SELECT about, email, fullname, nickname FROM Users
-	//			JOIN (SELECT nickname from UsersInForum WHERE forum=$1 %s ORDER BY nickname %s %s) as l
-	//				USING (nickname) ORDER BY nickname %s`
-
 	templateArgs := struct {
 		Since string
 		Limit string
 		Desc string
 	}{}
 
-	//var cmpPlaceholder, limitPlaceholder, orderPlaceholder string
 	paramsCount := 1
 	params := make([]interface{}, 0)
 	params = append(params, forumSlug)
@@ -111,7 +104,6 @@ func (r *PostgresRepo) GetUsers(forumSlug string, limit int64, since string, des
 		templateArgs.Limit = fmt.Sprintf(`LIMIT $%d`, paramsCount)
 		params = append(params, limit)
 	}
-	//query = fmt.Sprintf(query, cmpPlaceholder, orderPlaceholder, limitPlaceholder)
 	queryBuf := &bytes.Buffer{}
 	err := getForumUsersTemplate.Execute(queryBuf, templateArgs)
 	if err != nil {

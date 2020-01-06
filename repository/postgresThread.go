@@ -9,22 +9,11 @@ import (
 	"github.com/jackc/pgtype"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 var CreateThreadCounter int
 
-func init() {
-	threadVotesAccess.mutex = sync.Mutex{}
-}
-
-type SyncThreadVotes struct {
-	mutex sync.Mutex
-	hasNewUpdates int32
-}
-
-var threadVotesAccess SyncThreadVotes
 
 func (r *PostgresRepo) CreateThread(thread structs.Thread) (structs.Thread, error) {
 	query := `INSERT INTO Thread (author,forum,message,created,title, slug) VALUES 
@@ -75,11 +64,7 @@ func (r *PostgresRepo) GetThread(key interface{}) (structs.Thread, error) {
 
 // Get Threads of forum
 func (r *PostgresRepo) GetThreads(forumSlug string, limit int64, since string, desc bool) ([]structs.Thread, error) {
-	counter++
 	threads := make([]structs.Thread, 0)
-	//query := `SELECT author, forum, created, id, message, slug, title, tv.votes FROM Thread
-	//				JOIN ThreadVotes as tv on tv.thread=id WHERE lower(forum)=lower($1) %s ORDER BY created %s %s`
-
 	query := `SELECT author, forum, created, id, message, slug, title, votes FROM Thread 
 					WHERE lower(forum)=lower($1) %s ORDER BY created %s %s`
 
@@ -190,9 +175,6 @@ func (r *PostgresRepo) VoteThread(threadKey interface{}, user string, voice int)
            UPDATE SET vote=$3 WHERE vote.thread=$1 AND lower(vote.author)=lower($2)`
 	_, err := r.DB.Exec(context.Background(), query, id, user, voice)
 
-	//if err== nil {
-	//	atomic.AddInt32(&threadVotesAccess.hasNewUpdates, 1)
-	//}
 	return err
 }
 
@@ -214,24 +196,17 @@ func (r *PostgresRepo) getThreadId(threadKey interface{}) (int64, error) {
 }
 
 func (r *PostgresRepo) getThreadById(id int64) (structs.Thread, error) {
-	var thread structs.Thread
 	query := `SELECT author, created, forum, id, message, slug, title, votes FROM Thread WHERE id=$1`
-	//query := `SELECT author, created, forum, id, message, slug, title,
-	//			(SELECT votes FROM ThreadVotes WHERE ThreadVotes.thread=$1)
-	//			FROM Thread WHERE id=$1`
 
+	var thread structs.Thread
 	var created time.Time
 	var slug pgtype.Text
-	//if err:=r.loadThreadVotes(); err != nil {
-	//	return thread, err
-	//}
 	err := r.DB.QueryRow(context.Background(), query, id).
 		Scan(&thread.Author, &created, &thread.Forum,
 			&thread.Id, &thread.Message, &slug, &thread.Title, &thread.Votes)
 	thread.Created = created.Format(structs.OutTimeFormat)
-	//if slug.Status {
-		thread.Slug = slug.String
-	//}
+	thread.Slug = slug.String
+
 	return thread, err
 }
 
@@ -243,48 +218,4 @@ func (r *PostgresRepo) checkThreadExists(id interface{}) error{
 	return nil
 }
 
-func (r *PostgresRepo) loadThreadVotes() error{
-	if threadVotesAccess.hasNewUpdates==0{
-		return nil
-	}
-	//query := `begin;
-	//	UPDATE thread SET votes=thread.votes+temp.votes FROM threadvotes as temp WHERE temp.thread=Thread.id;
-	//	truncate threadvotes;
-	//	commit;`
-	tx, err := r.DB.Begin(context.Background())
-	if err != nil {
-		return err
-	}
-	threadVotesAccess.mutex.Lock()
-	defer threadVotesAccess.mutex.Unlock()
-	if threadVotesAccess.hasNewUpdates==0{
-		return nil
-	}
-	err = func () error {
-		_, err := tx.Exec(context.Background(), `UPDATE thread SET votes=thread.votes+temp.votes FROM threadvotes as temp WHERE temp.thread=Thread.id`)
-		if err != nil {
-			return err
-		}
-		//_, err = tx.Exec(context.Background(), `truncate threadvotes`)
-		_, err = tx.Exec(context.Background(), `UPDATE threadvotes SET votes=0`)
-		return err
-	}()
-	if err != nil {
-		return tx.Rollback(context.Background())
-	}
-	err =tx.Commit(context.Background())
-	if err != nil {
-		return err
-	}
-	threadVotesAccess.hasNewUpdates = 0
-	return nil
-
-	//query := `UPDATE thread SET votes=temp.votes FROM threadvotes as temp WHERE temp.thread=Thread.id`
-	//_, err := tx.Exec(context.Background(), query)
-	//if err != nil {
-	//	return err
-	//}
-	//threadVotesAccess.hasNewUpdates = 0
-	//return nil
-}
 
